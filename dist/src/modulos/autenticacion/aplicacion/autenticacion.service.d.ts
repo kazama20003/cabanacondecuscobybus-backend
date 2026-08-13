@@ -1,9 +1,12 @@
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
 export declare class AutenticacionService {
     private readonly prisma;
     private readonly jwt;
-    constructor(prisma: PrismaService, jwt: JwtService);
+    private readonly clienteGoogle;
+    private readonly googleClientId;
+    constructor(prisma: PrismaService, jwt: JwtService, configuracion: ConfigService);
     registrar(datos: {
         correo: string;
         contrasena: string;
@@ -20,6 +23,14 @@ export declare class AutenticacionService {
         };
     }>;
     iniciarSesion(correo: string, contrasena: string): Promise<{
+        tokenAcceso: string;
+        usuario: {
+            id: string;
+            correo: string;
+            rol: string;
+        };
+    }>;
+    iniciarSesionGoogle(idToken: string): Promise<{
         tokenAcceso: string;
         usuario: {
             id: string;

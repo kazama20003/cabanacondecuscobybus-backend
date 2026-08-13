@@ -65,6 +65,14 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], InicioSesionDto.prototype, "contrasena", void 0);
+class InicioSesionGoogleDto {
+    idToken;
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(20),
+    __metadata("design:type", String)
+], InicioSesionGoogleDto.prototype, "idToken", void 0);
 let AutenticacionController = class AutenticacionController {
     servicio;
     constructor(servicio) {
@@ -75,6 +83,9 @@ let AutenticacionController = class AutenticacionController {
     }
     iniciarSesion(datos) {
         return this.servicio.iniciarSesion(datos.correo, datos.contrasena);
+    }
+    iniciarSesionGoogle(datos) {
+        return this.servicio.iniciarSesionGoogle(datos.idToken);
     }
     perfil(usuario) {
         return this.servicio.perfil(usuario.id);
@@ -95,6 +106,13 @@ __decorate([
     __metadata("design:paramtypes", [InicioSesionDto]),
     __metadata("design:returntype", void 0)
 ], AutenticacionController.prototype, "iniciarSesion", null);
+__decorate([
+    (0, common_1.Post)('google'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [InicioSesionGoogleDto]),
+    __metadata("design:returntype", void 0)
+], AutenticacionController.prototype, "iniciarSesionGoogle", null);
 __decorate([
     (0, common_1.Get)('mi-perfil'),
     (0, common_1.UseGuards)(guardia_jwt_1.GuardiaJwt),

@@ -1,4 +1,38 @@
+import { PaginacionDto } from '../../../compartido/paginacion';
 import { CatalogoService } from '../aplicacion/catalogo.service';
+declare class FiltrosTransportesDto extends PaginacionDto {
+    origen?: string;
+    destino?: string;
+}
+declare class FiltrosToursDto extends PaginacionDto {
+    destino?: string;
+}
+declare class ContenidoDto {
+    titulo: string;
+    resumen: string;
+    descripcion: string;
+    queLlevar?: string;
+}
+declare class EditarTraduccionDto {
+    titulo?: string;
+    resumen?: string;
+    descripcion?: string;
+    queLlevar?: string;
+    estado?: 'BORRADOR' | 'PUBLICADA';
+}
+declare class MedioDto {
+    url: string;
+    textoAlterno?: string;
+    tipo?: 'IMAGEN' | 'VIDEO';
+}
+declare class ParadaDto {
+    nombre: string;
+    latitud: number;
+    longitud: number;
+    minutos: number;
+    duracionParadaMinutos?: number;
+    descripcion?: string;
+}
 declare class CrearTransporteDto {
     slug: string;
     origenNombre: string;
@@ -8,6 +42,9 @@ declare class CrearTransporteDto {
     destinoLatitud: number;
     destinoLongitud: number;
     duracionMinutosEstimada: number;
+    paradas?: ParadaDto[];
+    medios?: MedioDto[];
+    contenido?: ContenidoDto;
 }
 declare class CrearTourDto {
     slug: string;
@@ -15,6 +52,31 @@ declare class CrearTourDto {
     destinoLatitud: number;
     destinoLongitud: number;
     duracionMinutos: number;
+    medios?: MedioDto[];
+    contenido?: ContenidoDto;
+}
+declare class DefinirParadasDto {
+    paradas: ParadaDto[];
+}
+declare class ItemItinerarioDto {
+    titulo: string;
+    descripcion: string;
+    latitud?: number;
+    longitud?: number;
+}
+declare class DefinirItinerarioDto {
+    items: ItemItinerarioDto[];
+}
+declare class FiltrosSalidasDto extends PaginacionDto {
+    tipo?: 'TRANSPORTE' | 'TOUR';
+}
+declare class ActualizarSalidaDto {
+    estado?: 'BORRADOR' | 'A_LA_VENTA' | 'PENDIENTE_DE_MINIMO' | 'CONFIRMADA' | 'EN_CURSO' | 'FINALIZADA' | 'CANCELADA';
+    vehiculoId?: string;
+    capacidad?: number;
+    precioPen?: number;
+    precioUsd?: number;
+    fechaHoraSalida?: string;
 }
 declare class CrearSalidaDto {
     fechaHoraSalida: string;
@@ -26,23 +88,41 @@ declare class CrearSalidaDto {
 export declare class CatalogoController {
     private readonly servicio;
     constructor(servicio: CatalogoService);
-    transportes(origen?: string, destino?: string): import("@prisma/client").Prisma.PrismaPromise<({
+    transportes(filtros: FiltrosTransportesDto): Promise<import("../../../compartido/paginacion").Paginado<{
         paradas: {
             id: string;
-            transporteId: string;
             orden: number;
+            transporteId: string;
             nombre: string;
             latitud: import("@prisma/client-runtime-utils").Decimal;
             longitud: import("@prisma/client-runtime-utils").Decimal;
             minutos: number;
+            duracionParadaMinutos: number;
+            descripcion: string | null;
+        }[];
+        salidas: {
+            id: string;
+            creadoEn: Date;
+            actualizadoEn: Date;
+            estado: import("@prisma/client").$Enums.EstadoSalida;
+            fechaHoraSalida: Date;
+            transporteId: string;
+            vehiculoId: string | null;
+            fechaHoraLlegada: Date | null;
+            capacidad: number;
+            minimoPasajeros: number;
+            precioPen: import("@prisma/client-runtime-utils").Decimal;
+            precioUsd: import("@prisma/client-runtime-utils").Decimal;
+            permiteAdelanto: boolean;
+            porcentajeAdelanto: number;
         }[];
         traducciones: {
             id: string;
-            transporteId: string;
-            titulo: string;
-            descripcion: string;
             estado: import("@prisma/client").$Enums.EstadoTraduccion;
             idioma: string;
+            transporteId: string;
+            descripcion: string;
+            titulo: string;
             resumen: string;
         }[];
     } & {
@@ -50,33 +130,35 @@ export declare class CatalogoController {
         activo: boolean;
         creadoEn: Date;
         actualizadoEn: Date;
-        slug: string;
         origenNombre: string;
+        destinoNombre: string;
+        slug: string;
         origenLatitud: import("@prisma/client-runtime-utils").Decimal;
         origenLongitud: import("@prisma/client-runtime-utils").Decimal;
-        destinoNombre: string;
         destinoLatitud: import("@prisma/client-runtime-utils").Decimal;
         destinoLongitud: import("@prisma/client-runtime-utils").Decimal;
         duracionMinutosEstimada: number;
-    })[]>;
+    }>>;
     buscar(origen: string, destino: string, fecha: string, pasajeros: string): import("@prisma/client").Prisma.PrismaPromise<({
         transporte: {
             paradas: {
                 id: string;
-                transporteId: string;
                 orden: number;
+                transporteId: string;
                 nombre: string;
                 latitud: import("@prisma/client-runtime-utils").Decimal;
                 longitud: import("@prisma/client-runtime-utils").Decimal;
                 minutos: number;
+                duracionParadaMinutos: number;
+                descripcion: string | null;
             }[];
             traducciones: {
                 id: string;
-                transporteId: string;
-                titulo: string;
-                descripcion: string;
                 estado: import("@prisma/client").$Enums.EstadoTraduccion;
                 idioma: string;
+                transporteId: string;
+                descripcion: string;
+                titulo: string;
                 resumen: string;
             }[];
         } & {
@@ -84,11 +166,11 @@ export declare class CatalogoController {
             activo: boolean;
             creadoEn: Date;
             actualizadoEn: Date;
-            slug: string;
             origenNombre: string;
+            destinoNombre: string;
+            slug: string;
             origenLatitud: import("@prisma/client-runtime-utils").Decimal;
             origenLongitud: import("@prisma/client-runtime-utils").Decimal;
-            destinoNombre: string;
             destinoLatitud: import("@prisma/client-runtime-utils").Decimal;
             destinoLongitud: import("@prisma/client-runtime-utils").Decimal;
             duracionMinutosEstimada: number;
@@ -97,185 +179,390 @@ export declare class CatalogoController {
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        transporteId: string;
-        capacidad: number;
-        vehiculoId: string | null;
+        estado: import("@prisma/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
+        transporteId: string;
+        vehiculoId: string | null;
         fechaHoraLlegada: Date | null;
+        capacidad: number;
         minimoPasajeros: number;
         precioPen: import("@prisma/client-runtime-utils").Decimal;
         precioUsd: import("@prisma/client-runtime-utils").Decimal;
         permiteAdelanto: boolean;
         porcentajeAdelanto: number;
-        estado: import("@prisma/client").$Enums.EstadoSalida;
     })[]>;
     transporte(slug: string, idioma?: string): Promise<{
+        imagenes: {
+            url: string;
+            id: string;
+            orden: number;
+            transporteId: string | null;
+            textoAlterno: string | null;
+            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tourId: string | null;
+        }[];
         paradas: {
             id: string;
-            transporteId: string;
             orden: number;
+            transporteId: string;
             nombre: string;
             latitud: import("@prisma/client-runtime-utils").Decimal;
             longitud: import("@prisma/client-runtime-utils").Decimal;
             minutos: number;
+            duracionParadaMinutos: number;
+            descripcion: string | null;
         }[];
         traducciones: {
             id: string;
-            transporteId: string;
-            titulo: string;
-            descripcion: string;
             estado: import("@prisma/client").$Enums.EstadoTraduccion;
             idioma: string;
+            transporteId: string;
+            descripcion: string;
+            titulo: string;
             resumen: string;
-        }[];
-        imagenes: {
-            url: string;
-            id: string;
-            transporteId: string | null;
-            orden: number;
-            tourId: string | null;
-            textoAlterno: string | null;
         }[];
     } & {
         id: string;
         activo: boolean;
         creadoEn: Date;
         actualizadoEn: Date;
-        slug: string;
         origenNombre: string;
+        destinoNombre: string;
+        slug: string;
         origenLatitud: import("@prisma/client-runtime-utils").Decimal;
         origenLongitud: import("@prisma/client-runtime-utils").Decimal;
-        destinoNombre: string;
         destinoLatitud: import("@prisma/client-runtime-utils").Decimal;
         destinoLongitud: import("@prisma/client-runtime-utils").Decimal;
         duracionMinutosEstimada: number;
     }>;
-    tours(destino?: string): import("@prisma/client").Prisma.PrismaPromise<({
-        traducciones: {
-            id: string;
-            tourId: string;
-            titulo: string;
-            descripcion: string;
-            estado: import("@prisma/client").$Enums.EstadoTraduccion;
-            idioma: string;
-            resumen: string;
-            queLlevar: string | null;
-        }[];
+    tours(filtros: FiltrosToursDto): Promise<import("../../../compartido/paginacion").Paginado<{
         imagenes: {
             url: string;
             id: string;
-            transporteId: string | null;
             orden: number;
-            tourId: string | null;
+            transporteId: string | null;
             textoAlterno: string | null;
+            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tourId: string | null;
+        }[];
+        salidas: {
+            id: string;
+            creadoEn: Date;
+            actualizadoEn: Date;
+            estado: import("@prisma/client").$Enums.EstadoSalida;
+            fechaHoraSalida: Date;
+            capacidad: number;
+            minimoPasajeros: number;
+            precioPen: import("@prisma/client-runtime-utils").Decimal;
+            precioUsd: import("@prisma/client-runtime-utils").Decimal;
+            permiteAdelanto: boolean;
+            porcentajeAdelanto: number;
+            tourId: string;
+        }[];
+        traducciones: {
+            id: string;
+            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            idioma: string;
+            descripcion: string;
+            tourId: string;
+            titulo: string;
+            resumen: string;
+            queLlevar: string | null;
         }[];
     } & {
         id: string;
         activo: boolean;
         creadoEn: Date;
         actualizadoEn: Date;
-        slug: string;
         destinoNombre: string;
+        slug: string;
         destinoLatitud: import("@prisma/client-runtime-utils").Decimal;
         destinoLongitud: import("@prisma/client-runtime-utils").Decimal;
         duracionMinutos: number;
         requiereGuia: boolean;
-    })[]>;
+    }>>;
     tour(slug: string, idioma?: string): Promise<{
-        traducciones: {
-            id: string;
-            tourId: string;
-            titulo: string;
-            descripcion: string;
-            estado: import("@prisma/client").$Enums.EstadoTraduccion;
-            idioma: string;
-            resumen: string;
-            queLlevar: string | null;
-        }[];
         imagenes: {
             url: string;
             id: string;
-            transporteId: string | null;
             orden: number;
-            tourId: string | null;
+            transporteId: string | null;
             textoAlterno: string | null;
+            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tourId: string | null;
+        }[];
+        traducciones: {
+            id: string;
+            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            idioma: string;
+            descripcion: string;
+            tourId: string;
+            titulo: string;
+            resumen: string;
+            queLlevar: string | null;
         }[];
         itinerarios: {
             id: string;
             orden: number;
             latitud: import("@prisma/client-runtime-utils").Decimal | null;
             longitud: import("@prisma/client-runtime-utils").Decimal | null;
+            descripcion: string;
             tourId: string;
             titulo: string;
-            descripcion: string;
         }[];
     } & {
         id: string;
         activo: boolean;
         creadoEn: Date;
         actualizadoEn: Date;
-        slug: string;
         destinoNombre: string;
+        slug: string;
         destinoLatitud: import("@prisma/client-runtime-utils").Decimal;
         destinoLongitud: import("@prisma/client-runtime-utils").Decimal;
         duracionMinutos: number;
         requiereGuia: boolean;
     }>;
-    crearTransporte(datos: CrearTransporteDto): import("@prisma/client").Prisma.Prisma__TransporteClient<{
+    crearTransporte(datos: CrearTransporteDto): Promise<({
+        imagenes: {
+            url: string;
+            id: string;
+            orden: number;
+            transporteId: string | null;
+            textoAlterno: string | null;
+            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tourId: string | null;
+        }[];
+        paradas: {
+            id: string;
+            orden: number;
+            transporteId: string;
+            nombre: string;
+            latitud: import("@prisma/client-runtime-utils").Decimal;
+            longitud: import("@prisma/client-runtime-utils").Decimal;
+            minutos: number;
+            duracionParadaMinutos: number;
+            descripcion: string | null;
+        }[];
+        traducciones: {
+            id: string;
+            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            idioma: string;
+            transporteId: string;
+            descripcion: string;
+            titulo: string;
+            resumen: string;
+        }[];
+    } & {
         id: string;
         activo: boolean;
         creadoEn: Date;
         actualizadoEn: Date;
-        slug: string;
         origenNombre: string;
+        destinoNombre: string;
+        slug: string;
         origenLatitud: import("@prisma/client-runtime-utils").Decimal;
         origenLongitud: import("@prisma/client-runtime-utils").Decimal;
-        destinoNombre: string;
         destinoLatitud: import("@prisma/client-runtime-utils").Decimal;
         destinoLongitud: import("@prisma/client-runtime-utils").Decimal;
         duracionMinutosEstimada: number;
-    }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
-    crearTour(datos: CrearTourDto): import("@prisma/client").Prisma.Prisma__TourClient<{
+    }) | null>;
+    crearTour(datos: CrearTourDto): Promise<({
+        imagenes: {
+            url: string;
+            id: string;
+            orden: number;
+            transporteId: string | null;
+            textoAlterno: string | null;
+            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tourId: string | null;
+        }[];
+        traducciones: {
+            id: string;
+            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            idioma: string;
+            descripcion: string;
+            tourId: string;
+            titulo: string;
+            resumen: string;
+            queLlevar: string | null;
+        }[];
+    } & {
         id: string;
         activo: boolean;
         creadoEn: Date;
         actualizadoEn: Date;
-        slug: string;
         destinoNombre: string;
+        slug: string;
         destinoLatitud: import("@prisma/client-runtime-utils").Decimal;
         destinoLongitud: import("@prisma/client-runtime-utils").Decimal;
         duracionMinutos: number;
         requiereGuia: boolean;
+    }) | null>;
+    listarTraducciones(tipo: string, id: string): import("@prisma/client").Prisma.PrismaPromise<{
+        id: string;
+        estado: import("@prisma/client").$Enums.EstadoTraduccion;
+        idioma: string;
+        transporteId: string;
+        descripcion: string;
+        titulo: string;
+        resumen: string;
+    }[]> | import("@prisma/client").Prisma.PrismaPromise<{
+        id: string;
+        estado: import("@prisma/client").$Enums.EstadoTraduccion;
+        idioma: string;
+        descripcion: string;
+        tourId: string;
+        titulo: string;
+        resumen: string;
+        queLlevar: string | null;
+    }[]>;
+    editarTraduccion(tipo: string, id: string, idioma: string, datos: EditarTraduccionDto): import("@prisma/client").Prisma.Prisma__TraduccionTransporteClient<{
+        id: string;
+        estado: import("@prisma/client").$Enums.EstadoTraduccion;
+        idioma: string;
+        transporteId: string;
+        descripcion: string;
+        titulo: string;
+        resumen: string;
+    }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions> | import("@prisma/client").Prisma.Prisma__TraduccionTourClient<{
+        id: string;
+        estado: import("@prisma/client").$Enums.EstadoTraduccion;
+        idioma: string;
+        descripcion: string;
+        tourId: string;
+        titulo: string;
+        resumen: string;
+        queLlevar: string | null;
     }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
-    crearSalidaTransporte(transporteId: string, datos: CrearSalidaDto): import("@prisma/client").Prisma.Prisma__SalidaTransporteClient<{
+    definirItinerario(tourId: string, datos: DefinirItinerarioDto): Promise<{
+        id: string;
+        orden: number;
+        latitud: import("@prisma/client-runtime-utils").Decimal | null;
+        longitud: import("@prisma/client-runtime-utils").Decimal | null;
+        descripcion: string;
+        tourId: string;
+        titulo: string;
+    }[]>;
+    listarSalidas(filtros: FiltrosSalidasDto): Promise<import("../../../compartido/paginacion").Paginado<{
+        ocupados: number;
+        reservas: undefined;
+        transporte: {
+            origenNombre: string;
+            destinoNombre: string;
+            slug: string;
+        };
+        vehiculo: {
+            id: string;
+            activo: boolean;
+            creadoEn: Date;
+            capacidad: number;
+            placa: string;
+            tipoPropiedad: import("@prisma/client").$Enums.TipoVehiculo;
+            proveedor: string | null;
+        } | null;
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        transporteId: string;
-        capacidad: number;
-        vehiculoId: string | null;
+        estado: import("@prisma/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
+        transporteId: string;
+        vehiculoId: string | null;
         fechaHoraLlegada: Date | null;
+        capacidad: number;
         minimoPasajeros: number;
         precioPen: import("@prisma/client-runtime-utils").Decimal;
         precioUsd: import("@prisma/client-runtime-utils").Decimal;
         permiteAdelanto: boolean;
         porcentajeAdelanto: number;
+    }> | import("../../../compartido/paginacion").Paginado<{
+        ocupados: number;
+        reservas: undefined;
+        tour: {
+            destinoNombre: string;
+            slug: string;
+        };
+        id: string;
+        creadoEn: Date;
+        actualizadoEn: Date;
         estado: import("@prisma/client").$Enums.EstadoSalida;
+        fechaHoraSalida: Date;
+        capacidad: number;
+        minimoPasajeros: number;
+        precioPen: import("@prisma/client-runtime-utils").Decimal;
+        precioUsd: import("@prisma/client-runtime-utils").Decimal;
+        permiteAdelanto: boolean;
+        porcentajeAdelanto: number;
+        tourId: string;
+    }>>;
+    actualizarSalida(tipoSalida: string, id: string, cambios: ActualizarSalidaDto): Promise<{
+        id: string;
+        creadoEn: Date;
+        actualizadoEn: Date;
+        estado: import("@prisma/client").$Enums.EstadoSalida;
+        fechaHoraSalida: Date;
+        transporteId: string;
+        vehiculoId: string | null;
+        fechaHoraLlegada: Date | null;
+        capacidad: number;
+        minimoPasajeros: number;
+        precioPen: import("@prisma/client-runtime-utils").Decimal;
+        precioUsd: import("@prisma/client-runtime-utils").Decimal;
+        permiteAdelanto: boolean;
+        porcentajeAdelanto: number;
+    } | {
+        id: string;
+        creadoEn: Date;
+        actualizadoEn: Date;
+        estado: import("@prisma/client").$Enums.EstadoSalida;
+        fechaHoraSalida: Date;
+        capacidad: number;
+        minimoPasajeros: number;
+        precioPen: import("@prisma/client-runtime-utils").Decimal;
+        precioUsd: import("@prisma/client-runtime-utils").Decimal;
+        permiteAdelanto: boolean;
+        porcentajeAdelanto: number;
+        tourId: string;
+    }>;
+    definirParadas(transporteId: string, datos: DefinirParadasDto): Promise<{
+        id: string;
+        orden: number;
+        transporteId: string;
+        nombre: string;
+        latitud: import("@prisma/client-runtime-utils").Decimal;
+        longitud: import("@prisma/client-runtime-utils").Decimal;
+        minutos: number;
+        duracionParadaMinutos: number;
+        descripcion: string | null;
+    }[]>;
+    crearSalidaTransporte(transporteId: string, datos: CrearSalidaDto): import("@prisma/client").Prisma.Prisma__SalidaTransporteClient<{
+        id: string;
+        creadoEn: Date;
+        actualizadoEn: Date;
+        estado: import("@prisma/client").$Enums.EstadoSalida;
+        fechaHoraSalida: Date;
+        transporteId: string;
+        vehiculoId: string | null;
+        fechaHoraLlegada: Date | null;
+        capacidad: number;
+        minimoPasajeros: number;
+        precioPen: import("@prisma/client-runtime-utils").Decimal;
+        precioUsd: import("@prisma/client-runtime-utils").Decimal;
+        permiteAdelanto: boolean;
+        porcentajeAdelanto: number;
     }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     crearSalidaTour(tourId: string, datos: CrearSalidaDto): import("@prisma/client").Prisma.Prisma__SalidaTourClient<{
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        tourId: string;
-        capacidad: number;
+        estado: import("@prisma/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
+        capacidad: number;
         minimoPasajeros: number;
         precioPen: import("@prisma/client-runtime-utils").Decimal;
         precioUsd: import("@prisma/client-runtime-utils").Decimal;
         permiteAdelanto: boolean;
         porcentajeAdelanto: number;
-        estado: import("@prisma/client").$Enums.EstadoSalida;
+        tourId: string;
     }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
 }
 export {};

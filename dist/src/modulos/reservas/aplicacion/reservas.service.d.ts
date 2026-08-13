@@ -1,5 +1,6 @@
 import { MetodoPago, Moneda, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
+import { IzipayService } from '../../pagos/aplicacion/izipay.service';
 type Pasajero = {
     nombres: string;
     apellidos: string;
@@ -9,7 +10,8 @@ type Pasajero = {
 };
 export declare class ReservasService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly izipay;
+    constructor(prisma: PrismaService, izipay: IzipayService);
     crear(datos: {
         tipoServicio: 'TRANSPORTE' | 'TOUR';
         salidaId: string;
@@ -55,11 +57,11 @@ export declare class ReservasService {
                 activo: boolean;
                 creadoEn: Date;
                 actualizadoEn: Date;
-                slug: string;
                 origenNombre: string;
+                destinoNombre: string;
+                slug: string;
                 origenLatitud: Prisma.Decimal;
                 origenLongitud: Prisma.Decimal;
-                destinoNombre: string;
                 destinoLatitud: Prisma.Decimal;
                 destinoLongitud: Prisma.Decimal;
                 duracionMinutosEstimada: number;
@@ -68,17 +70,17 @@ export declare class ReservasService {
             id: string;
             creadoEn: Date;
             actualizadoEn: Date;
-            transporteId: string;
-            capacidad: number;
-            vehiculoId: string | null;
+            estado: import("@prisma/client").$Enums.EstadoSalida;
             fechaHoraSalida: Date;
+            transporteId: string;
+            vehiculoId: string | null;
             fechaHoraLlegada: Date | null;
+            capacidad: number;
             minimoPasajeros: number;
             precioPen: Prisma.Decimal;
             precioUsd: Prisma.Decimal;
             permiteAdelanto: boolean;
             porcentajeAdelanto: number;
-            estado: import("@prisma/client").$Enums.EstadoSalida;
         }) | null;
         salidaTour: ({
             tour: {
@@ -86,8 +88,8 @@ export declare class ReservasService {
                 activo: boolean;
                 creadoEn: Date;
                 actualizadoEn: Date;
-                slug: string;
                 destinoNombre: string;
+                slug: string;
                 destinoLatitud: Prisma.Decimal;
                 destinoLongitud: Prisma.Decimal;
                 duracionMinutos: number;
@@ -97,15 +99,15 @@ export declare class ReservasService {
             id: string;
             creadoEn: Date;
             actualizadoEn: Date;
-            tourId: string;
-            capacidad: number;
+            estado: import("@prisma/client").$Enums.EstadoSalida;
             fechaHoraSalida: Date;
+            capacidad: number;
             minimoPasajeros: number;
             precioPen: Prisma.Decimal;
             precioUsd: Prisma.Decimal;
             permiteAdelanto: boolean;
             porcentajeAdelanto: number;
-            estado: import("@prisma/client").$Enums.EstadoSalida;
+            tourId: string;
         }) | null;
         pasajeros: {
             id: string;
@@ -121,6 +123,7 @@ export declare class ReservasService {
             creadoEn: Date;
             estado: import("@prisma/client").$Enums.EstadoPago;
             moneda: import("@prisma/client").$Enums.Moneda;
+            referenciaProveedor: string | null;
             reservaId: string;
             confirmadoPorId: string | null;
             monto: Prisma.Decimal;
@@ -128,7 +131,6 @@ export declare class ReservasService {
             esAdelanto: boolean;
             codigoOperacion: string | null;
             urlComprobante: string | null;
-            referenciaProveedor: string | null;
             confirmadoEn: Date | null;
         }[];
     } & {
@@ -155,7 +157,8 @@ export declare class ReservasService {
         monto: Prisma.Decimal;
         moneda: import("@prisma/client").$Enums.Moneda;
         estado: import("@prisma/client").$Enums.EstadoPago;
-        mensaje: string;
+        formToken: string;
+        llavePublica: string;
     }>;
     registrarComprobanteSaldo(codigo: string, token: string, datos: {
         codigoOperacion: string;
@@ -166,6 +169,7 @@ export declare class ReservasService {
         creadoEn: Date;
         estado: import("@prisma/client").$Enums.EstadoPago;
         moneda: import("@prisma/client").$Enums.Moneda;
+        referenciaProveedor: string | null;
         reservaId: string;
         confirmadoPorId: string | null;
         monto: Prisma.Decimal;
@@ -173,7 +177,6 @@ export declare class ReservasService {
         esAdelanto: boolean;
         codigoOperacion: string | null;
         urlComprobante: string | null;
-        referenciaProveedor: string | null;
         confirmadoEn: Date | null;
     }>;
     confirmarPago(pagoId: string, administradorId: string): Promise<{
@@ -201,6 +204,7 @@ export declare class ReservasService {
         creadoEn: Date;
         estado: import("@prisma/client").$Enums.EstadoPago;
         moneda: import("@prisma/client").$Enums.Moneda;
+        referenciaProveedor: string | null;
         reservaId: string;
         confirmadoPorId: string | null;
         monto: Prisma.Decimal;
@@ -208,7 +212,6 @@ export declare class ReservasService {
         esAdelanto: boolean;
         codigoOperacion: string | null;
         urlComprobante: string | null;
-        referenciaProveedor: string | null;
         confirmadoEn: Date | null;
     }>;
     private codigo;

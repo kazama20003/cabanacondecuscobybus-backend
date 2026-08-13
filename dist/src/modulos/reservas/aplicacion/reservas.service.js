@@ -14,10 +14,13 @@ const common_1 = require("@nestjs/common");
 const client_1 = require("@prisma/client");
 const node_crypto_1 = require("node:crypto");
 const prisma_service_1 = require("../../../compartido/prisma/prisma.service");
+const izipay_service_1 = require("../../pagos/aplicacion/izipay.service");
 let ReservasService = class ReservasService {
     prisma;
-    constructor(prisma) {
+    izipay;
+    constructor(prisma, izipay) {
         this.prisma = prisma;
+        this.izipay = izipay;
     }
     async crear(datos) {
         if (!datos.pasajeros.length)
@@ -100,22 +103,40 @@ let ReservasService = class ReservasService {
         if (!reserva)
             throw new common_1.NotFoundException('Reserva no encontrada');
         if (reserva.estado !== client_1.EstadoReserva.PENDIENTE_PAGO)
-            throw new common_1.BadRequestException('La reserva ya tiene un pago iniciado');
-        const pago = await this.prisma.pago.create({
-            data: {
+            throw new common_1.BadRequestException('La reserva ya no está pendiente de pago');
+        let pago = await this.prisma.pago.findFirst({
+            where: {
                 reservaId: reserva.id,
-                monto: reserva.montoAdelanto,
-                moneda: reserva.moneda,
                 metodo: client_1.MetodoPago.IZIPAY,
+                estado: client_1.EstadoPago.PENDIENTE,
                 esAdelanto: true,
             },
+        });
+        if (!pago) {
+            pago = await this.prisma.pago.create({
+                data: {
+                    reservaId: reserva.id,
+                    monto: reserva.montoAdelanto,
+                    moneda: reserva.moneda,
+                    metodo: client_1.MetodoPago.IZIPAY,
+                    esAdelanto: true,
+                },
+            });
+        }
+        const izipay = await this.izipay.crearFormToken({
+            pagoId: pago.id,
+            montoCentimos: Math.round(pago.monto.toNumber() * 100),
+            moneda: pago.moneda,
+            correoCliente: reserva.correoContacto,
+            codigoReserva: reserva.codigo,
         });
         return {
             pagoId: pago.id,
             monto: pago.monto,
             moneda: pago.moneda,
             estado: pago.estado,
-            mensaje: 'Pago creado. Configure las credenciales Izipay para obtener la URL de cobro.',
+            formToken: izipay.formToken,
+            llavePublica: izipay.llavePublica,
         };
     }
     async registrarComprobanteSaldo(codigo, token, datos) {
@@ -181,6 +202,7 @@ let ReservasService = class ReservasService {
 exports.ReservasService = ReservasService;
 exports.ReservasService = ReservasService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        izipay_service_1.IzipayService])
 ], ReservasService);
 //# sourceMappingURL=reservas.service.js.map

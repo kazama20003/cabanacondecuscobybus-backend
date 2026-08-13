@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
 import { AutenticacionController } from './presentacion/autenticacion.controller';
 import { AutenticacionService } from './aplicacion/autenticacion.service';
 import { GuardiaJwt } from './presentacion/guardia-jwt';
+import { GuardiaRoles } from './presentacion/roles';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { GuardiaJwt } from './presentacion/guardia-jwt';
     }),
   ],
   controllers: [AutenticacionController],
-  providers: [AutenticacionService, GuardiaJwt],
-  exports: [AutenticacionService, JwtModule, GuardiaJwt],
+  providers: [AutenticacionService, GuardiaJwt, GuardiaRoles],
+  exports: [AutenticacionService, JwtModule, GuardiaJwt, GuardiaRoles],
 })
 export class AutenticacionModule {}
+

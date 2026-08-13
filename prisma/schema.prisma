@@ -57,6 +57,11 @@ enum TipoVehiculo {
   TERCERO
 }
 
+enum TipoMedio {
+  IMAGEN
+  VIDEO
+}
+
 enum EstadoTraduccion {
   BORRADOR
   PUBLICADA
@@ -110,6 +115,8 @@ model ParadaTransporte {
   latitud     Decimal     @db.Decimal(10, 7)
   longitud    Decimal     @db.Decimal(10, 7)
   minutos     Int         @map("minutos")
+  duracionParadaMinutos Int     @default(0) @map("duracion_parada_minutos")
+  descripcion String?
   transporte  Transporte  @relation(fields: [transporteId], references: [id], onDelete: Cascade)
 
   @@unique([transporteId, orden])
@@ -317,6 +324,7 @@ model Imagen {
   url           String
   textoAlterno  String?      @map("texto_alterno")
   orden         Int          @default(0)
+  tipo          TipoMedio    @default(IMAGEN)
   transporte    Transporte?  @relation(fields: [transporteId], references: [id], onDelete: Cascade)
   tour          Tour?        @relation(fields: [tourId], references: [id], onDelete: Cascade)
 

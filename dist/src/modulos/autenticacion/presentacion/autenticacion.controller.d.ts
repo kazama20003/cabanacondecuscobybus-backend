@@ -11,6 +11,9 @@ declare class InicioSesionDto {
     correo: string;
     contrasena: string;
 }
+declare class InicioSesionGoogleDto {
+    idToken: string;
+}
 export declare class AutenticacionController {
     private readonly servicio;
     constructor(servicio: AutenticacionService);
@@ -23,6 +26,14 @@ export declare class AutenticacionController {
         };
     }>;
     iniciarSesion(datos: InicioSesionDto): Promise<{
+        tokenAcceso: string;
+        usuario: {
+            id: string;
+            correo: string;
+            rol: string;
+        };
+    }>;
+    iniciarSesionGoogle(datos: InicioSesionGoogleDto): Promise<{
         tokenAcceso: string;
         usuario: {
             id: string;

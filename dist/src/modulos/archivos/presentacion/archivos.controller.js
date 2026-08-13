@@ -15,9 +15,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArchivosController = void 0;
 const common_1 = require("@nestjs/common");
 const class_validator_1 = require("class-validator");
-const guardia_administrador_1 = require("../../autenticacion/presentacion/guardia-administrador");
+const roles_1 = require("../../autenticacion/presentacion/roles");
 const archivos_service_1 = require("../aplicacion/archivos.service");
-class CrearCargaImagenDto {
+class CrearCargaDto {
     nombreArchivo;
     tipoContenido;
     categoria;
@@ -25,35 +25,52 @@ class CrearCargaImagenDto {
 __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
-], CrearCargaImagenDto.prototype, "nombreArchivo", void 0);
+], CrearCargaDto.prototype, "nombreArchivo", void 0);
 __decorate([
-    (0, class_validator_1.IsIn)(['image/jpeg', 'image/png', 'image/webp']),
+    (0, class_validator_1.IsIn)([
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'video/mp4',
+        'video/webm',
+        'video/quicktime',
+    ]),
     __metadata("design:type", String)
-], CrearCargaImagenDto.prototype, "tipoContenido", void 0);
+], CrearCargaDto.prototype, "tipoContenido", void 0);
 __decorate([
     (0, class_validator_1.IsIn)(['transportes', 'tours', 'comprobantes']),
     __metadata("design:type", String)
-], CrearCargaImagenDto.prototype, "categoria", void 0);
+], CrearCargaDto.prototype, "categoria", void 0);
 let ArchivosController = class ArchivosController {
     servicio;
     constructor(servicio) {
         this.servicio = servicio;
     }
+    crearCarga(datos) {
+        return this.servicio.crearCarga(datos.nombreArchivo, datos.tipoContenido, datos.categoria);
+    }
     crearCargaImagen(datos) {
-        return this.servicio.crearCargaImagen(datos.nombreArchivo, datos.tipoContenido, datos.categoria);
+        return this.servicio.crearCarga(datos.nombreArchivo, datos.tipoContenido, datos.categoria);
     }
 };
 exports.ArchivosController = ArchivosController;
 __decorate([
+    (0, common_1.Post)('cargas'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [CrearCargaDto]),
+    __metadata("design:returntype", void 0)
+], ArchivosController.prototype, "crearCarga", null);
+__decorate([
     (0, common_1.Post)('cargas-imagen'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [CrearCargaImagenDto]),
+    __metadata("design:paramtypes", [CrearCargaDto]),
     __metadata("design:returntype", void 0)
 ], ArchivosController.prototype, "crearCargaImagen", null);
 exports.ArchivosController = ArchivosController = __decorate([
     (0, common_1.Controller)('administracion/archivos'),
-    (0, common_1.UseGuards)(guardia_administrador_1.GuardiaAdministrador),
+    (0, roles_1.Roles)('ADMINISTRADOR', 'OPERADOR'),
     __metadata("design:paramtypes", [archivos_service_1.ArchivosService])
 ], ArchivosController);
 //# sourceMappingURL=archivos.controller.js.map

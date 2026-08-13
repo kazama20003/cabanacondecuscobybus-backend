@@ -44,15 +44,21 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AutenticacionService = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcryptjs"));
+const google_auth_library_1 = require("google-auth-library");
 const prisma_service_1 = require("../../../compartido/prisma/prisma.service");
 let AutenticacionService = class AutenticacionService {
     prisma;
     jwt;
-    constructor(prisma, jwt) {
+    clienteGoogle;
+    googleClientId;
+    constructor(prisma, jwt, configuracion) {
         this.prisma = prisma;
         this.jwt = jwt;
+        this.googleClientId = configuracion.getOrThrow('GOOGLE_CLIENT_ID');
+        this.clienteGoogle = new google_auth_library_1.OAuth2Client(this.googleClientId);
     }
     async registrar(datos) {
         const existe = await this.prisma.usuario.findUnique({
@@ -78,8 +84,54 @@ let AutenticacionService = class AutenticacionService {
         });
         if (!usuario ||
             !usuario.activo ||
+            !usuario.contrasenaHash ||
             !(await bcrypt.compare(contrasena, usuario.contrasenaHash))) {
             throw new common_1.UnauthorizedException('Correo o contraseña incorrectos');
+        }
+        return this.respuestaSesion(usuario);
+    }
+    async iniciarSesionGoogle(idToken) {
+        let carga;
+        try {
+            const ticket = await this.clienteGoogle.verifyIdToken({
+                idToken,
+                audience: this.googleClientId,
+            });
+            carga = ticket.getPayload();
+        }
+        catch {
+            throw new common_1.UnauthorizedException('Token de Google inválido');
+        }
+        if (!carga?.sub || !carga.email || carga.email_verified !== true) {
+            throw new common_1.UnauthorizedException('La cuenta de Google no tiene un correo verificado');
+        }
+        const correo = carga.email.toLowerCase();
+        let usuario = await this.prisma.usuario.findUnique({
+            where: { googleId: carga.sub },
+        });
+        if (!usuario) {
+            const porCorreo = await this.prisma.usuario.findUnique({
+                where: { correo },
+            });
+            if (porCorreo) {
+                usuario = await this.prisma.usuario.update({
+                    where: { id: porCorreo.id },
+                    data: { googleId: carga.sub },
+                });
+            }
+            else {
+                usuario = await this.prisma.usuario.create({
+                    data: {
+                        correo,
+                        googleId: carga.sub,
+                        nombres: carga.given_name ?? carga.name ?? 'Usuario',
+                        apellidos: carga.family_name ?? '',
+                    },
+                });
+            }
+        }
+        if (!usuario.activo) {
+            throw new common_1.UnauthorizedException('La cuenta está desactivada');
         }
         return this.respuestaSesion(usuario);
     }
@@ -115,6 +167,7 @@ exports.AutenticacionService = AutenticacionService;
 exports.AutenticacionService = AutenticacionService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        config_1.ConfigService])
 ], AutenticacionService);
 //# sourceMappingURL=autenticacion.service.js.map

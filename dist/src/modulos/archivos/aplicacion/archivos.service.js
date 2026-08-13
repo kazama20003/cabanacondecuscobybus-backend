@@ -15,14 +15,18 @@ const config_1 = require("@nestjs/config");
 const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_request_presigner_1 = require("@aws-sdk/s3-request-presigner");
 const node_crypto_1 = require("node:crypto");
+const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'];
+const TIPOS_VIDEO = ['video/mp4', 'video/webm', 'video/quicktime'];
 let ArchivosService = class ArchivosService {
     configuracion;
     constructor(configuracion) {
         this.configuracion = configuracion;
     }
-    async crearCargaImagen(nombreArchivo, tipoContenido, categoria) {
-        if (!['image/jpeg', 'image/png', 'image/webp'].includes(tipoContenido)) {
-            throw new common_1.ServiceUnavailableException('Solo se permiten imágenes JPG, PNG o WebP');
+    async crearCarga(nombreArchivo, tipoContenido, categoria) {
+        const esImagen = TIPOS_IMAGEN.includes(tipoContenido);
+        const esVideo = TIPOS_VIDEO.includes(tipoContenido);
+        if (!esImagen && !esVideo) {
+            throw new common_1.BadRequestException('Solo se permiten imágenes JPG/PNG/WebP o videos MP4/WebM/MOV');
         }
         const cuenta = this.configuracion.get('R2_CUENTA_ID');
         const acceso = this.configuracion.get('R2_LLAVE_ACCESO_ID');
@@ -30,10 +34,11 @@ let ArchivosService = class ArchivosService {
         const bucket = this.configuracion.get('R2_BUCKET');
         const urlPublica = this.configuracion.get('R2_URL_PUBLICA');
         if (!cuenta || !acceso || !secreto || !bucket || !urlPublica) {
-            throw new common_1.ServiceUnavailableException('Cloudflare R2 no está configurado');
+            throw new common_1.ServiceUnavailableException('Cloudflare R2 no está configurado (R2_CUENTA_ID, R2_LLAVE_ACCESO_ID, R2_LLAVE_SECRETA, R2_BUCKET, R2_URL_PUBLICA)');
         }
-        const extension = nombreArchivo.split('.').pop()?.toLowerCase() ?? 'webp';
-        const clave = `imagenes/${categoria}/${(0, node_crypto_1.randomUUID)()}.${extension}`;
+        const extension = nombreArchivo.split('.').pop()?.toLowerCase() ?? 'bin';
+        const carpeta = esVideo ? 'videos' : 'imagenes';
+        const clave = `${carpeta}/${categoria}/${(0, node_crypto_1.randomUUID)()}.${extension}`;
         const cliente = new client_s3_1.S3Client({
             region: 'auto',
             endpoint: `https://${cuenta}.r2.cloudflarestorage.com`,
@@ -46,6 +51,7 @@ let ArchivosService = class ArchivosService {
         });
         return {
             clave,
+            tipo: esVideo ? 'VIDEO' : 'IMAGEN',
             urlCarga: await (0, s3_request_presigner_1.getSignedUrl)(cliente, comando, { expiresIn: 600 }),
             urlPublica: `${urlPublica.replace(/\/$/, '')}/${clave}`,
             venceEnSegundos: 600,

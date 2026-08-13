@@ -13,6 +13,7 @@ const jwt_1 = require("@nestjs/jwt");
 const autenticacion_controller_1 = require("./presentacion/autenticacion.controller");
 const autenticacion_service_1 = require("./aplicacion/autenticacion.service");
 const guardia_jwt_1 = require("./presentacion/guardia-jwt");
+const roles_1 = require("./presentacion/roles");
 let AutenticacionModule = class AutenticacionModule {
 };
 exports.AutenticacionModule = AutenticacionModule;
@@ -31,8 +32,8 @@ exports.AutenticacionModule = AutenticacionModule = __decorate([
             }),
         ],
         controllers: [autenticacion_controller_1.AutenticacionController],
-        providers: [autenticacion_service_1.AutenticacionService, guardia_jwt_1.GuardiaJwt],
-        exports: [autenticacion_service_1.AutenticacionService, jwt_1.JwtModule, guardia_jwt_1.GuardiaJwt],
+        providers: [autenticacion_service_1.AutenticacionService, guardia_jwt_1.GuardiaJwt, roles_1.GuardiaRoles],
+        exports: [autenticacion_service_1.AutenticacionService, jwt_1.JwtModule, guardia_jwt_1.GuardiaJwt, roles_1.GuardiaRoles],
     })
 ], AutenticacionModule);
 //# sourceMappingURL=autenticacion.module.js.map

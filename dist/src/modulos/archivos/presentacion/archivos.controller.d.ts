@@ -1,5 +1,5 @@
 import { ArchivosService } from '../aplicacion/archivos.service';
-declare class CrearCargaImagenDto {
+declare class CrearCargaDto {
     nombreArchivo: string;
     tipoContenido: string;
     categoria: string;
@@ -7,8 +7,16 @@ declare class CrearCargaImagenDto {
 export declare class ArchivosController {
     private readonly servicio;
     constructor(servicio: ArchivosService);
-    crearCargaImagen(datos: CrearCargaImagenDto): Promise<{
+    crearCarga(datos: CrearCargaDto): Promise<{
         clave: string;
+        tipo: string;
+        urlCarga: string;
+        urlPublica: string;
+        venceEnSegundos: number;
+    }>;
+    crearCargaImagen(datos: CrearCargaDto): Promise<{
+        clave: string;
+        tipo: string;
         urlCarga: string;
         urlPublica: string;
         venceEnSegundos: number;

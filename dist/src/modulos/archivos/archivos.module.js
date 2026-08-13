@@ -9,7 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArchivosModule = void 0;
 const common_1 = require("@nestjs/common");
 const autenticacion_module_1 = require("../autenticacion/autenticacion.module");
-const guardia_administrador_1 = require("../autenticacion/presentacion/guardia-administrador");
+const roles_1 = require("../autenticacion/presentacion/roles");
 const archivos_service_1 = require("./aplicacion/archivos.service");
 const archivos_controller_1 = require("./presentacion/archivos.controller");
 let ArchivosModule = class ArchivosModule {
@@ -19,7 +19,7 @@ exports.ArchivosModule = ArchivosModule = __decorate([
     (0, common_1.Module)({
         imports: [autenticacion_module_1.AutenticacionModule],
         controllers: [archivos_controller_1.ArchivosController],
-        providers: [archivos_service_1.ArchivosService, guardia_administrador_1.GuardiaAdministrador],
+        providers: [archivos_service_1.ArchivosService, roles_1.GuardiaRoles],
     })
 ], ArchivosModule);
 //# sourceMappingURL=archivos.module.js.map

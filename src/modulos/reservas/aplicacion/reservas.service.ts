@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
+import { IzipayService } from '../../pagos/aplicacion/izipay.service';
 
 type Pasajero = {
   nombres: string;
@@ -24,7 +25,10 @@ type Pasajero = {
 
 @Injectable()
 export class ReservasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly izipay: IzipayService,
+  ) {}
 
   async crear(datos: {
     tipoServicio: 'TRANSPORTE' | 'TOUR';
@@ -125,23 +129,45 @@ export class ReservasService {
     const reserva = await this.prisma.reserva.findUnique({ where: { codigo } });
     if (!reserva) throw new NotFoundException('Reserva no encontrada');
     if (reserva.estado !== EstadoReserva.PENDIENTE_PAGO)
-      throw new BadRequestException('La reserva ya tiene un pago iniciado');
-    const pago = await this.prisma.pago.create({
-      data: {
+      throw new BadRequestException('La reserva ya no está pendiente de pago');
+
+    // Reutiliza el pago pendiente si el cliente reintenta (no duplica).
+    let pago = await this.prisma.pago.findFirst({
+      where: {
         reservaId: reserva.id,
-        monto: reserva.montoAdelanto,
-        moneda: reserva.moneda,
         metodo: MetodoPago.IZIPAY,
+        estado: EstadoPago.PENDIENTE,
         esAdelanto: true,
       },
     });
+    if (!pago) {
+      pago = await this.prisma.pago.create({
+        data: {
+          reservaId: reserva.id,
+          monto: reserva.montoAdelanto,
+          moneda: reserva.moneda,
+          metodo: MetodoPago.IZIPAY,
+          esAdelanto: true,
+        },
+      });
+    }
+
+    const izipay = await this.izipay.crearFormToken({
+      pagoId: pago.id,
+      // Izipay trabaja en céntimos
+      montoCentimos: Math.round(pago.monto.toNumber() * 100),
+      moneda: pago.moneda,
+      correoCliente: reserva.correoContacto,
+      codigoReserva: reserva.codigo,
+    });
+
     return {
       pagoId: pago.id,
       monto: pago.monto,
       moneda: pago.moneda,
       estado: pago.estado,
-      mensaje:
-        'Pago creado. Configure las credenciales Izipay para obtener la URL de cobro.',
+      formToken: izipay.formToken,
+      llavePublica: izipay.llavePublica,
     };
   }
 
