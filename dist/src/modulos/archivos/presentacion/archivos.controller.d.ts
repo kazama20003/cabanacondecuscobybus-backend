@@ -10,14 +10,14 @@ export declare class ArchivosController {
     crearCarga(datos: CrearCargaDto): Promise<{
         clave: string;
         tipo: string;
-        urlCarga: string;
+        urlCarga: any;
         urlPublica: string;
         venceEnSegundos: number;
     }>;
     crearCargaImagen(datos: CrearCargaDto): Promise<{
         clave: string;
         tipo: string;
-        urlCarga: string;
+        urlCarga: any;
         urlPublica: string;
         venceEnSegundos: number;
     }>;

@@ -78,10 +78,10 @@ export declare class CatalogoService {
     }>>;
     obtenerTransporte(slug: string, idioma: string): Promise<{
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
             tipo: import("@prisma/client").$Enums.TipoMedio;
             tourId: string | null;
@@ -122,10 +122,10 @@ export declare class CatalogoService {
     }>;
     listarTours(paginacion: PaginacionDto, destino?: string): Promise<import("../../../compartido/paginacion").Paginado<{
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
             tipo: import("@prisma/client").$Enums.TipoMedio;
             tourId: string | null;
@@ -168,10 +168,10 @@ export declare class CatalogoService {
     }>>;
     obtenerTour(slug: string, idioma: string): Promise<{
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
             tipo: import("@prisma/client").$Enums.TipoMedio;
             tourId: string | null;
@@ -273,10 +273,10 @@ export declare class CatalogoService {
         contenido?: ContenidoEntrada;
     }): Promise<({
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
             tipo: import("@prisma/client").$Enums.TipoMedio;
             tourId: string | null;
@@ -327,10 +327,10 @@ export declare class CatalogoService {
         contenido?: ContenidoEntrada;
     }): Promise<({
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
             tipo: import("@prisma/client").$Enums.TipoMedio;
             tourId: string | null;

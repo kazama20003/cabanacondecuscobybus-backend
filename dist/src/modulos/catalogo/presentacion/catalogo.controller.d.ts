@@ -104,7 +104,7 @@ export declare class CatalogoController {
             id: string;
             creadoEn: Date;
             actualizadoEn: Date;
-            estado: import("@prisma/client").$Enums.EstadoSalida;
+            estado: import(".prisma/client/client").$Enums.EstadoSalida;
             fechaHoraSalida: Date;
             transporteId: string;
             vehiculoId: string | null;
@@ -118,7 +118,7 @@ export declare class CatalogoController {
         }[];
         traducciones: {
             id: string;
-            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
             idioma: string;
             transporteId: string;
             descripcion: string;
@@ -139,7 +139,7 @@ export declare class CatalogoController {
         destinoLongitud: import("@prisma/client-runtime-utils").Decimal;
         duracionMinutosEstimada: number;
     }>>;
-    buscar(origen: string, destino: string, fecha: string, pasajeros: string): import("@prisma/client").Prisma.PrismaPromise<({
+    buscar(origen: string, destino: string, fecha: string, pasajeros: string): import(".prisma/client/client").Prisma.PrismaPromise<({
         transporte: {
             paradas: {
                 id: string;
@@ -154,7 +154,7 @@ export declare class CatalogoController {
             }[];
             traducciones: {
                 id: string;
-                estado: import("@prisma/client").$Enums.EstadoTraduccion;
+                estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
                 idioma: string;
                 transporteId: string;
                 descripcion: string;
@@ -179,7 +179,7 @@ export declare class CatalogoController {
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        estado: import("@prisma/client").$Enums.EstadoSalida;
+        estado: import(".prisma/client/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
         transporteId: string;
         vehiculoId: string | null;
@@ -193,12 +193,12 @@ export declare class CatalogoController {
     })[]>;
     transporte(slug: string, idioma?: string): Promise<{
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
-            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tipo: import(".prisma/client/client").$Enums.TipoMedio;
             tourId: string | null;
         }[];
         paradas: {
@@ -214,7 +214,7 @@ export declare class CatalogoController {
         }[];
         traducciones: {
             id: string;
-            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
             idioma: string;
             transporteId: string;
             descripcion: string;
@@ -237,19 +237,19 @@ export declare class CatalogoController {
     }>;
     tours(filtros: FiltrosToursDto): Promise<import("../../../compartido/paginacion").Paginado<{
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
-            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tipo: import(".prisma/client/client").$Enums.TipoMedio;
             tourId: string | null;
         }[];
         salidas: {
             id: string;
             creadoEn: Date;
             actualizadoEn: Date;
-            estado: import("@prisma/client").$Enums.EstadoSalida;
+            estado: import(".prisma/client/client").$Enums.EstadoSalida;
             fechaHoraSalida: Date;
             capacidad: number;
             minimoPasajeros: number;
@@ -261,7 +261,7 @@ export declare class CatalogoController {
         }[];
         traducciones: {
             id: string;
-            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
             idioma: string;
             descripcion: string;
             tourId: string;
@@ -283,17 +283,17 @@ export declare class CatalogoController {
     }>>;
     tour(slug: string, idioma?: string): Promise<{
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
-            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tipo: import(".prisma/client/client").$Enums.TipoMedio;
             tourId: string | null;
         }[];
         traducciones: {
             id: string;
-            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
             idioma: string;
             descripcion: string;
             tourId: string;
@@ -324,12 +324,12 @@ export declare class CatalogoController {
     }>;
     crearTransporte(datos: CrearTransporteDto): Promise<({
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
-            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tipo: import(".prisma/client/client").$Enums.TipoMedio;
             tourId: string | null;
         }[];
         paradas: {
@@ -345,7 +345,7 @@ export declare class CatalogoController {
         }[];
         traducciones: {
             id: string;
-            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
             idioma: string;
             transporteId: string;
             descripcion: string;
@@ -368,17 +368,17 @@ export declare class CatalogoController {
     }) | null>;
     crearTour(datos: CrearTourDto): Promise<({
         imagenes: {
-            url: string;
             id: string;
             orden: number;
             transporteId: string | null;
+            url: string;
             textoAlterno: string | null;
-            tipo: import("@prisma/client").$Enums.TipoMedio;
+            tipo: import(".prisma/client/client").$Enums.TipoMedio;
             tourId: string | null;
         }[];
         traducciones: {
             id: string;
-            estado: import("@prisma/client").$Enums.EstadoTraduccion;
+            estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
             idioma: string;
             descripcion: string;
             tourId: string;
@@ -398,17 +398,17 @@ export declare class CatalogoController {
         duracionMinutos: number;
         requiereGuia: boolean;
     }) | null>;
-    listarTraducciones(tipo: string, id: string): import("@prisma/client").Prisma.PrismaPromise<{
+    listarTraducciones(tipo: string, id: string): import(".prisma/client/client").Prisma.PrismaPromise<{
         id: string;
-        estado: import("@prisma/client").$Enums.EstadoTraduccion;
+        estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
         idioma: string;
         transporteId: string;
         descripcion: string;
         titulo: string;
         resumen: string;
-    }[]> | import("@prisma/client").Prisma.PrismaPromise<{
+    }[]> | import(".prisma/client/client").Prisma.PrismaPromise<{
         id: string;
-        estado: import("@prisma/client").$Enums.EstadoTraduccion;
+        estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
         idioma: string;
         descripcion: string;
         tourId: string;
@@ -416,24 +416,24 @@ export declare class CatalogoController {
         resumen: string;
         queLlevar: string | null;
     }[]>;
-    editarTraduccion(tipo: string, id: string, idioma: string, datos: EditarTraduccionDto): import("@prisma/client").Prisma.Prisma__TraduccionTransporteClient<{
+    editarTraduccion(tipo: string, id: string, idioma: string, datos: EditarTraduccionDto): import(".prisma/client/client").Prisma.Prisma__TraduccionTransporteClient<{
         id: string;
-        estado: import("@prisma/client").$Enums.EstadoTraduccion;
+        estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
         idioma: string;
         transporteId: string;
         descripcion: string;
         titulo: string;
         resumen: string;
-    }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions> | import("@prisma/client").Prisma.Prisma__TraduccionTourClient<{
+    }, never, import("@prisma/client/runtime/client").DefaultArgs, import(".prisma/client/client").Prisma.PrismaClientOptions> | import(".prisma/client/client").Prisma.Prisma__TraduccionTourClient<{
         id: string;
-        estado: import("@prisma/client").$Enums.EstadoTraduccion;
+        estado: import(".prisma/client/client").$Enums.EstadoTraduccion;
         idioma: string;
         descripcion: string;
         tourId: string;
         titulo: string;
         resumen: string;
         queLlevar: string | null;
-    }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
+    }, never, import("@prisma/client/runtime/client").DefaultArgs, import(".prisma/client/client").Prisma.PrismaClientOptions>;
     definirItinerario(tourId: string, datos: DefinirItinerarioDto): Promise<{
         id: string;
         orden: number;
@@ -457,13 +457,13 @@ export declare class CatalogoController {
             creadoEn: Date;
             capacidad: number;
             placa: string;
-            tipoPropiedad: import("@prisma/client").$Enums.TipoVehiculo;
+            tipoPropiedad: import(".prisma/client/client").$Enums.TipoVehiculo;
             proveedor: string | null;
         } | null;
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        estado: import("@prisma/client").$Enums.EstadoSalida;
+        estado: import(".prisma/client/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
         transporteId: string;
         vehiculoId: string | null;
@@ -484,7 +484,7 @@ export declare class CatalogoController {
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        estado: import("@prisma/client").$Enums.EstadoSalida;
+        estado: import(".prisma/client/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
         capacidad: number;
         minimoPasajeros: number;
@@ -498,7 +498,7 @@ export declare class CatalogoController {
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        estado: import("@prisma/client").$Enums.EstadoSalida;
+        estado: import(".prisma/client/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
         transporteId: string;
         vehiculoId: string | null;
@@ -513,7 +513,7 @@ export declare class CatalogoController {
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        estado: import("@prisma/client").$Enums.EstadoSalida;
+        estado: import(".prisma/client/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
         capacidad: number;
         minimoPasajeros: number;
@@ -534,11 +534,11 @@ export declare class CatalogoController {
         duracionParadaMinutos: number;
         descripcion: string | null;
     }[]>;
-    crearSalidaTransporte(transporteId: string, datos: CrearSalidaDto): import("@prisma/client").Prisma.Prisma__SalidaTransporteClient<{
+    crearSalidaTransporte(transporteId: string, datos: CrearSalidaDto): import(".prisma/client/client").Prisma.Prisma__SalidaTransporteClient<{
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        estado: import("@prisma/client").$Enums.EstadoSalida;
+        estado: import(".prisma/client/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
         transporteId: string;
         vehiculoId: string | null;
@@ -549,12 +549,12 @@ export declare class CatalogoController {
         precioUsd: import("@prisma/client-runtime-utils").Decimal;
         permiteAdelanto: boolean;
         porcentajeAdelanto: number;
-    }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
-    crearSalidaTour(tourId: string, datos: CrearSalidaDto): import("@prisma/client").Prisma.Prisma__SalidaTourClient<{
+    }, never, import("@prisma/client/runtime/client").DefaultArgs, import(".prisma/client/client").Prisma.PrismaClientOptions>;
+    crearSalidaTour(tourId: string, datos: CrearSalidaDto): import(".prisma/client/client").Prisma.Prisma__SalidaTourClient<{
         id: string;
         creadoEn: Date;
         actualizadoEn: Date;
-        estado: import("@prisma/client").$Enums.EstadoSalida;
+        estado: import(".prisma/client/client").$Enums.EstadoSalida;
         fechaHoraSalida: Date;
         capacidad: number;
         minimoPasajeros: number;
@@ -563,6 +563,6 @@ export declare class CatalogoController {
         permiteAdelanto: boolean;
         porcentajeAdelanto: number;
         tourId: string;
-    }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
+    }, never, import("@prisma/client/runtime/client").DefaultArgs, import(".prisma/client/client").Prisma.PrismaClientOptions>;
 }
 export {};

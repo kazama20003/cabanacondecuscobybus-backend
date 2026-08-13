@@ -1,6 +1,7 @@
 import { MetodoPago, Moneda, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
 import { IzipayService } from '../../pagos/aplicacion/izipay.service';
+import { PromocionesService } from '../../promociones/aplicacion/promociones.service';
 type Pasajero = {
     nombres: string;
     apellidos: string;
@@ -11,7 +12,8 @@ type Pasajero = {
 export declare class ReservasService {
     private readonly prisma;
     private readonly izipay;
-    constructor(prisma: PrismaService, izipay: IzipayService);
+    private readonly promociones;
+    constructor(prisma: PrismaService, izipay: IzipayService, promociones: PromocionesService);
     crear(datos: {
         tipoServicio: 'TRANSPORTE' | 'TOUR';
         salidaId: string;
@@ -21,6 +23,7 @@ export declare class ReservasService {
         moneda: Moneda;
         pasajeros: Pasajero[];
         usuarioId?: string;
+        codigoPromocion?: string;
     }): Promise<{
         pasajeros: {
             id: string;
@@ -48,8 +51,101 @@ export declare class ReservasService {
         montoTotal: Prisma.Decimal;
         montoAdelanto: Prisma.Decimal;
         montoSaldo: Prisma.Decimal;
+        promocionId: string | null;
+        montoDescuento: Prisma.Decimal;
         tokenGestionInvitado: string;
     }>;
+    misReservas(usuarioId: string): Prisma.PrismaPromise<({
+        salidaTransporte: ({
+            transporte: {
+                origenNombre: string;
+                destinoNombre: string;
+                slug: string;
+            };
+        } & {
+            id: string;
+            creadoEn: Date;
+            actualizadoEn: Date;
+            estado: import("@prisma/client").$Enums.EstadoSalida;
+            fechaHoraSalida: Date;
+            transporteId: string;
+            vehiculoId: string | null;
+            fechaHoraLlegada: Date | null;
+            capacidad: number;
+            minimoPasajeros: number;
+            precioPen: Prisma.Decimal;
+            precioUsd: Prisma.Decimal;
+            permiteAdelanto: boolean;
+            porcentajeAdelanto: number;
+        }) | null;
+        salidaTour: ({
+            tour: {
+                destinoNombre: string;
+                slug: string;
+            };
+        } & {
+            id: string;
+            creadoEn: Date;
+            actualizadoEn: Date;
+            estado: import("@prisma/client").$Enums.EstadoSalida;
+            fechaHoraSalida: Date;
+            capacidad: number;
+            minimoPasajeros: number;
+            precioPen: Prisma.Decimal;
+            precioUsd: Prisma.Decimal;
+            permiteAdelanto: boolean;
+            porcentajeAdelanto: number;
+            tourId: string;
+        }) | null;
+        promocion: {
+            titulo: string;
+            codigo: string | null;
+        } | null;
+        pasajeros: {
+            id: string;
+            nombres: string;
+            apellidos: string;
+            reservaId: string;
+            nacionalidad: string;
+            tipoDocumento: string;
+            numeroDocumento: string;
+        }[];
+        pagos: {
+            id: string;
+            creadoEn: Date;
+            estado: import("@prisma/client").$Enums.EstadoPago;
+            moneda: import("@prisma/client").$Enums.Moneda;
+            referenciaProveedor: string | null;
+            reservaId: string;
+            confirmadoPorId: string | null;
+            monto: Prisma.Decimal;
+            metodo: import("@prisma/client").$Enums.MetodoPago;
+            esAdelanto: boolean;
+            codigoOperacion: string | null;
+            urlComprobante: string | null;
+            confirmadoEn: Date | null;
+        }[];
+    } & {
+        id: string;
+        telefonoWhatsApp: string;
+        paisResidencia: string | null;
+        creadoEn: Date;
+        actualizadoEn: Date;
+        estado: import("@prisma/client").$Enums.EstadoReserva;
+        codigo: string;
+        usuarioId: string | null;
+        salidaTransporteId: string | null;
+        salidaTourId: string | null;
+        correoContacto: string;
+        cantidadPasajeros: number;
+        moneda: import("@prisma/client").$Enums.Moneda;
+        montoTotal: Prisma.Decimal;
+        montoAdelanto: Prisma.Decimal;
+        montoSaldo: Prisma.Decimal;
+        promocionId: string | null;
+        montoDescuento: Prisma.Decimal;
+        tokenGestionInvitado: string;
+    })[]>;
     verInvitado(codigo: string, token: string): Promise<{
         salidaTransporte: ({
             transporte: {
@@ -150,6 +246,8 @@ export declare class ReservasService {
         montoTotal: Prisma.Decimal;
         montoAdelanto: Prisma.Decimal;
         montoSaldo: Prisma.Decimal;
+        promocionId: string | null;
+        montoDescuento: Prisma.Decimal;
         tokenGestionInvitado: string;
     }>;
     iniciarPagoAdelanto(codigo: string): Promise<{
@@ -197,6 +295,8 @@ export declare class ReservasService {
             montoTotal: Prisma.Decimal;
             montoAdelanto: Prisma.Decimal;
             montoSaldo: Prisma.Decimal;
+            promocionId: string | null;
+            montoDescuento: Prisma.Decimal;
             tokenGestionInvitado: string;
         };
     } & {

@@ -15,16 +15,22 @@ const client_1 = require("@prisma/client");
 const node_crypto_1 = require("node:crypto");
 const prisma_service_1 = require("../../../compartido/prisma/prisma.service");
 const izipay_service_1 = require("../../pagos/aplicacion/izipay.service");
+const promociones_service_1 = require("../../promociones/aplicacion/promociones.service");
 let ReservasService = class ReservasService {
     prisma;
     izipay;
-    constructor(prisma, izipay) {
+    promociones;
+    constructor(prisma, izipay, promociones) {
         this.prisma = prisma;
         this.izipay = izipay;
+        this.promociones = promociones;
     }
     async crear(datos) {
         if (!datos.pasajeros.length)
             throw new common_1.BadRequestException('Debe registrar al menos un pasajero');
+        const promocion = datos.codigoPromocion
+            ? await this.promociones.validarCupon(datos.codigoPromocion, datos.tipoServicio === 'TRANSPORTE' ? 'TRANSPORTES' : 'TOURS')
+            : null;
         return this.prisma.$transaction(async (tx) => {
             const salida = datos.tipoServicio === 'TRANSPORTE'
                 ? await tx.salidaTransporte.findUnique({
@@ -50,12 +56,22 @@ let ReservasService = class ReservasService {
             if ((ocupacion._sum.cantidadPasajeros ?? 0) + datos.pasajeros.length >
                 salida.capacidad)
                 throw new common_1.BadRequestException('No hay cupos suficientes');
-            const montoTotal = datos.moneda === client_1.Moneda.PEN
+            const montoBruto = datos.moneda === client_1.Moneda.PEN
                 ? salida.precioPen.mul(datos.pasajeros.length)
                 : salida.precioUsd.mul(datos.pasajeros.length);
+            const montoDescuento = promocion
+                ? this.promociones.calcularDescuento(promocion, montoBruto)
+                : new client_1.Prisma.Decimal(0);
+            const montoTotal = montoBruto.sub(montoDescuento);
             const montoAdelanto = salida.permiteAdelanto
                 ? montoTotal.mul(salida.porcentajeAdelanto).div(100)
                 : montoTotal;
+            if (promocion) {
+                await tx.promocion.update({
+                    where: { id: promocion.id },
+                    data: { usos: { increment: 1 } },
+                });
+            }
             const reserva = await tx.reserva.create({
                 data: {
                     codigo: this.codigo(),
@@ -70,6 +86,8 @@ let ReservasService = class ReservasService {
                     montoTotal,
                     montoAdelanto,
                     montoSaldo: montoTotal.sub(montoAdelanto),
+                    promocionId: promocion?.id,
+                    montoDescuento,
                     tokenGestionInvitado: (0, node_crypto_1.randomBytes)(24).toString('hex'),
                     pasajeros: { create: datos.pasajeros },
                     historial: {
@@ -83,6 +101,27 @@ let ReservasService = class ReservasService {
             });
             return reserva;
         }, { isolationLevel: client_1.Prisma.TransactionIsolationLevel.Serializable });
+    }
+    misReservas(usuarioId) {
+        return this.prisma.reserva.findMany({
+            where: { usuarioId },
+            include: {
+                pasajeros: true,
+                pagos: true,
+                promocion: { select: { titulo: true, codigo: true } },
+                salidaTransporte: {
+                    include: {
+                        transporte: {
+                            select: { origenNombre: true, destinoNombre: true, slug: true },
+                        },
+                    },
+                },
+                salidaTour: {
+                    include: { tour: { select: { destinoNombre: true, slug: true } } },
+                },
+            },
+            orderBy: { creadoEn: 'desc' },
+        });
     }
     async verInvitado(codigo, token) {
         const reserva = await this.prisma.reserva.findFirst({
@@ -203,6 +242,7 @@ exports.ReservasService = ReservasService;
 exports.ReservasService = ReservasService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        izipay_service_1.IzipayService])
+        izipay_service_1.IzipayService,
+        promociones_service_1.PromocionesService])
 ], ReservasService);
 //# sourceMappingURL=reservas.service.js.map

@@ -13,6 +13,7 @@ const autenticacion_module_1 = require("./modulos/autenticacion/autenticacion.mo
 const archivos_module_1 = require("./modulos/archivos/archivos.module");
 const catalogo_module_1 = require("./modulos/catalogo/catalogo.module");
 const pagos_module_1 = require("./modulos/pagos/pagos.module");
+const promociones_module_1 = require("./modulos/promociones/promociones.module");
 const reservas_module_1 = require("./modulos/reservas/reservas.module");
 const usuarios_module_1 = require("./modulos/usuarios/usuarios.module");
 const limpieza_module_1 = require("./compartido/limpieza/limpieza.module");
@@ -32,6 +33,7 @@ exports.AppModule = AppModule = __decorate([
             archivos_module_1.ArchivosModule,
             catalogo_module_1.CatalogoModule,
             pagos_module_1.PagosModule,
+            promociones_module_1.PromocionesModule,
             reservas_module_1.ReservasModule,
             usuarios_module_1.UsuariosModule,
         ],

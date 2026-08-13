@@ -50,7 +50,7 @@ export declare class AutenticacionController {
         apellidos: string;
         telefonoWhatsApp: string | null;
         paisResidencia: string | null;
-        rol: import("@prisma/client").$Enums.RolUsuario;
+        rol: import(".prisma/client/client").$Enums.RolUsuario;
     }>;
 }
 export {};

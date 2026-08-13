@@ -14,6 +14,7 @@ import {
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
 import { IzipayService } from '../../pagos/aplicacion/izipay.service';
+import { PromocionesService } from '../../promociones/aplicacion/promociones.service';
 
 type Pasajero = {
   nombres: string;
@@ -28,6 +29,7 @@ export class ReservasService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly izipay: IzipayService,
+    private readonly promociones: PromocionesService,
   ) {}
 
   async crear(datos: {
@@ -39,9 +41,19 @@ export class ReservasService {
     moneda: Moneda;
     pasajeros: Pasajero[];
     usuarioId?: string;
+    codigoPromocion?: string;
   }) {
     if (!datos.pasajeros.length)
       throw new BadRequestException('Debe registrar al menos un pasajero');
+
+    // Valida el cupón ANTES de abrir la transacción (consulta externa liviana)
+    const promocion = datos.codigoPromocion
+      ? await this.promociones.validarCupon(
+          datos.codigoPromocion,
+          datos.tipoServicio === 'TRANSPORTE' ? 'TRANSPORTES' : 'TOURS',
+        )
+      : null;
+
     return this.prisma.$transaction(
       async (tx) => {
         const salida =
@@ -71,13 +83,23 @@ export class ReservasService {
           salida.capacidad
         )
           throw new BadRequestException('No hay cupos suficientes');
-        const montoTotal =
+        const montoBruto =
           datos.moneda === Moneda.PEN
             ? salida.precioPen.mul(datos.pasajeros.length)
             : salida.precioUsd.mul(datos.pasajeros.length);
+        const montoDescuento = promocion
+          ? this.promociones.calcularDescuento(promocion, montoBruto)
+          : new Prisma.Decimal(0);
+        const montoTotal = montoBruto.sub(montoDescuento);
         const montoAdelanto = salida.permiteAdelanto
           ? montoTotal.mul(salida.porcentajeAdelanto).div(100)
           : montoTotal;
+        if (promocion) {
+          await tx.promocion.update({
+            where: { id: promocion.id },
+            data: { usos: { increment: 1 } },
+          });
+        }
         const reserva = await tx.reserva.create({
           data: {
             codigo: this.codigo(),
@@ -94,6 +116,8 @@ export class ReservasService {
             montoTotal,
             montoAdelanto,
             montoSaldo: montoTotal.sub(montoAdelanto),
+            promocionId: promocion?.id,
+            montoDescuento,
             tokenGestionInvitado: randomBytes(24).toString('hex'),
             pasajeros: { create: datos.pasajeros },
             historial: {
@@ -109,6 +133,29 @@ export class ReservasService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+  }
+
+  /** Reservas del usuario logueado (perfil del turista). */
+  misReservas(usuarioId: string) {
+    return this.prisma.reserva.findMany({
+      where: { usuarioId },
+      include: {
+        pasajeros: true,
+        pagos: true,
+        promocion: { select: { titulo: true, codigo: true } },
+        salidaTransporte: {
+          include: {
+            transporte: {
+              select: { origenNombre: true, destinoNombre: true, slug: true },
+            },
+          },
+        },
+        salidaTour: {
+          include: { tour: { select: { destinoNombre: true, slug: true } } },
+        },
+      },
+      orderBy: { creadoEn: 'desc' },
+    });
   }
 
   async verInvitado(codigo: string, token: string) {

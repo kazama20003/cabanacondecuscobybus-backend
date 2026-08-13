@@ -10,6 +10,7 @@ exports.ReservasModule = void 0;
 const common_1 = require("@nestjs/common");
 const autenticacion_module_1 = require("../autenticacion/autenticacion.module");
 const pagos_module_1 = require("../pagos/pagos.module");
+const promociones_module_1 = require("../promociones/promociones.module");
 const guardia_administrador_1 = require("../autenticacion/presentacion/guardia-administrador");
 const reservas_service_1 = require("./aplicacion/reservas.service");
 const reservas_controller_1 = require("./presentacion/reservas.controller");
@@ -18,7 +19,7 @@ let ReservasModule = class ReservasModule {
 exports.ReservasModule = ReservasModule;
 exports.ReservasModule = ReservasModule = __decorate([
     (0, common_1.Module)({
-        imports: [autenticacion_module_1.AutenticacionModule, pagos_module_1.PagosModule],
+        imports: [autenticacion_module_1.AutenticacionModule, pagos_module_1.PagosModule, promociones_module_1.PromocionesModule],
         controllers: [reservas_controller_1.ReservasController],
         providers: [reservas_service_1.ReservasService, guardia_administrador_1.GuardiaAdministrador],
     })

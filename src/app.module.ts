@@ -4,6 +4,7 @@ import { AutenticacionModule } from './modulos/autenticacion/autenticacion.modul
 import { ArchivosModule } from './modulos/archivos/archivos.module';
 import { CatalogoModule } from './modulos/catalogo/catalogo.module';
 import { PagosModule } from './modulos/pagos/pagos.module';
+import { PromocionesModule } from './modulos/promociones/promociones.module';
 import { ReservasModule } from './modulos/reservas/reservas.module';
 import { UsuariosModule } from './modulos/usuarios/usuarios.module';
 import { LimpiezaModule } from './compartido/limpieza/limpieza.module';
@@ -20,9 +21,11 @@ import { TraduccionModule } from './compartido/traduccion/traduccion.module';
     ArchivosModule,
     CatalogoModule,
     PagosModule,
+    PromocionesModule,
     ReservasModule,
     UsuariosModule,
   ],
 })
 export class AppModule {}
+
 

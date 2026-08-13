@@ -18,6 +18,7 @@ const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 const client_1 = require("@prisma/client");
 const guardia_administrador_1 = require("../../autenticacion/presentacion/guardia-administrador");
+const guardia_jwt_1 = require("../../autenticacion/presentacion/guardia-jwt");
 const usuario_actual_1 = require("../../autenticacion/presentacion/usuario-actual");
 const reservas_service_1 = require("../aplicacion/reservas.service");
 class PasajeroDto {
@@ -55,6 +56,7 @@ class CrearReservaDto {
     paisResidencia;
     moneda;
     pasajeros;
+    codigoPromocion;
 }
 __decorate([
     (0, class_validator_1.IsEnum)(['TRANSPORTE', 'TOUR']),
@@ -87,6 +89,11 @@ __decorate([
     (0, class_transformer_1.Type)(() => PasajeroDto),
     __metadata("design:type", Array)
 ], CrearReservaDto.prototype, "pasajeros", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CrearReservaDto.prototype, "codigoPromocion", void 0);
 class ComprobanteSaldoDto {
     codigoOperacion;
     urlComprobante;
@@ -106,11 +113,24 @@ __decorate([
 ], ComprobanteSaldoDto.prototype, "metodo", void 0);
 let ReservasController = class ReservasController {
     servicio;
-    constructor(servicio) {
+    guardiaJwt;
+    constructor(servicio, guardiaJwt) {
         this.servicio = servicio;
+        this.guardiaJwt = guardiaJwt;
     }
-    crear(datos) {
-        return this.servicio.crear(datos);
+    crear(datos, solicitud) {
+        let usuarioId;
+        try {
+            this.guardiaJwt.canActivate({
+                switchToHttp: () => ({ getRequest: () => solicitud }),
+            });
+            usuarioId = solicitud.usuario?.id;
+        }
+        catch { }
+        return this.servicio.crear({ ...datos, usuarioId });
+    }
+    misReservas(usuario) {
+        return this.servicio.misReservas(usuario.id);
     }
     verInvitado(codigo, token) {
         return this.servicio.verInvitado(codigo, token);
@@ -129,10 +149,19 @@ exports.ReservasController = ReservasController;
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [CrearReservaDto]),
+    __metadata("design:paramtypes", [CrearReservaDto, Object]),
     __metadata("design:returntype", void 0)
 ], ReservasController.prototype, "crear", null);
+__decorate([
+    (0, common_1.Get)('mias'),
+    (0, common_1.UseGuards)(guardia_jwt_1.GuardiaJwt),
+    __param(0, (0, usuario_actual_1.UsuarioActual)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ReservasController.prototype, "misReservas", null);
 __decorate([
     (0, common_1.Get)(':codigo'),
     __param(0, (0, common_1.Param)('codigo')),
@@ -168,6 +197,7 @@ __decorate([
 ], ReservasController.prototype, "confirmarPago", null);
 exports.ReservasController = ReservasController = __decorate([
     (0, common_1.Controller)('reservas'),
-    __metadata("design:paramtypes", [reservas_service_1.ReservasService])
+    __metadata("design:paramtypes", [reservas_service_1.ReservasService,
+        guardia_jwt_1.GuardiaJwt])
 ], ReservasController);
 //# sourceMappingURL=reservas.controller.js.map
