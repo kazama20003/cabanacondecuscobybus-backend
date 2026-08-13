@@ -65,7 +65,8 @@ enum EstadoTraduccion {
 model Usuario {
   id                String      @id @default(uuid()) @db.Uuid
   correo            String      @unique
-  contrasenaHash    String      @map("contrasena_hash")
+  contrasenaHash    String?     @map("contrasena_hash")
+  googleId          String?     @unique @map("google_id")
   nombres           String
   apellidos         String
   telefonoWhatsApp  String?     @map("telefono_whatsapp")

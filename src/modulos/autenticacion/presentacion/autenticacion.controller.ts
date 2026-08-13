@@ -16,6 +16,9 @@ class InicioSesionDto {
   @IsEmail() correo: string;
   @IsString() contrasena: string;
 }
+class InicioSesionGoogleDto {
+  @IsString() @MinLength(20) idToken: string;
+}
 
 @Controller('autenticacion')
 export class AutenticacionController {
@@ -26,6 +29,9 @@ export class AutenticacionController {
   }
   @Post('inicio-sesion') iniciarSesion(@Body() datos: InicioSesionDto) {
     return this.servicio.iniciarSesion(datos.correo, datos.contrasena);
+  }
+  @Post('google') iniciarSesionGoogle(@Body() datos: InicioSesionGoogleDto) {
+    return this.servicio.iniciarSesionGoogle(datos.idToken);
   }
   @Get('mi-perfil') @UseGuards(GuardiaJwt) perfil(
     @UsuarioActual() usuario: { id: string },
