@@ -15,7 +15,7 @@ const TIPOS_VIDEO = ['video/mp4', 'video/webm', 'video/quicktime'];
 export class ArchivosService {
   constructor(private readonly configuracion: ConfigService) {}
 
-  /** URL firmada de carga a Cloudflare R2 para imágenes o videos. */
+  /** URL firmada de carga a AWS S3 para imágenes o videos. */
   async crearCarga(
     nombreArchivo: string,
     tipoContenido: string,
@@ -28,23 +28,25 @@ export class ArchivosService {
         'Solo se permiten imágenes JPG/PNG/WebP o videos MP4/WebM/MOV',
       );
     }
-    const cuenta = this.configuracion.get<string>('R2_CUENTA_ID');
-    const acceso = this.configuracion.get<string>('R2_LLAVE_ACCESO_ID');
-    const secreto = this.configuracion.get<string>('R2_LLAVE_SECRETA');
-    const bucket = this.configuracion.get<string>('R2_BUCKET');
-    const urlPublica = this.configuracion.get<string>('R2_URL_PUBLICA');
-    if (!cuenta || !acceso || !secreto || !bucket || !urlPublica) {
+    const region = this.configuracion.get<string>('AWS_REGION');
+    const acceso = this.configuracion.get<string>('AWS_ACCESS_KEY_ID');
+    const secreto = this.configuracion.get<string>('AWS_SECRET_ACCESS_KEY');
+    const bucket = this.configuracion.get<string>('S3_BUCKET');
+    if (!region || !acceso || !secreto || !bucket) {
       throw new ServiceUnavailableException(
-        'Cloudflare R2 no está configurado (R2_CUENTA_ID, R2_LLAVE_ACCESO_ID, R2_LLAVE_SECRETA, R2_BUCKET, R2_URL_PUBLICA)',
+        'AWS S3 no está configurado (AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET)',
       );
     }
+    // URL pública: CloudFront/dominio propio si está definido; si no, la del bucket
+    const urlPublica =
+      this.configuracion.get<string>('S3_URL_PUBLICA') ||
+      `https://${bucket}.s3.${region}.amazonaws.com`;
 
     const extension = nombreArchivo.split('.').pop()?.toLowerCase() ?? 'bin';
     const carpeta = esVideo ? 'videos' : 'imagenes';
     const clave = `${carpeta}/${categoria}/${randomUUID()}.${extension}`;
     const cliente = new S3Client({
-      region: 'auto',
-      endpoint: `https://${cuenta}.r2.cloudflarestorage.com`,
+      region,
       credentials: { accessKeyId: acceso, secretAccessKey: secreto },
     });
     const comando = new PutObjectCommand({

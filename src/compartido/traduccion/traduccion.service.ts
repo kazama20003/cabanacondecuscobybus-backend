@@ -1,27 +1,40 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  TranslateClient,
+  TranslateTextCommand,
+} from '@aws-sdk/client-translate';
 
 /**
- * Traducción automática con Google Translate.
- * - Si GOOGLE_TRANSLATE_API_KEY está configurada usa la API oficial v2.
- * - Si no, usa el endpoint gratuito (client=gtx) — sin configuración,
- *   suficiente para desarrollo y volúmenes bajos.
+ * Traducción automática.
+ * - Con credenciales AWS (AWS_REGION + AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY)
+ *   usa Amazon Translate (2M caracteres/mes gratis el primer año, luego $15/millón).
+ * - Sin credenciales, usa el endpoint gratuito de Google (client=gtx) —
+ *   suficiente para desarrollo.
  * Si la traducción falla, devuelve el texto original (nunca bloquea el guardado).
  */
 @Injectable()
 export class TraduccionService {
   private readonly logger = new Logger(TraduccionService.name);
-  private readonly apiKey?: string;
+  private readonly clienteAws?: TranslateClient;
 
   constructor(configuracion: ConfigService) {
-    this.apiKey = configuracion.get<string>('GOOGLE_TRANSLATE_API_KEY');
+    const region = configuracion.get<string>('AWS_REGION');
+    const acceso = configuracion.get<string>('AWS_ACCESS_KEY_ID');
+    const secreto = configuracion.get<string>('AWS_SECRET_ACCESS_KEY');
+    if (region && acceso && secreto) {
+      this.clienteAws = new TranslateClient({
+        region,
+        credentials: { accessKeyId: acceso, secretAccessKey: secreto },
+      });
+    }
   }
 
   async traducir(texto: string, de: string, a: string): Promise<string> {
     if (!texto.trim() || de === a) return texto;
     try {
-      return this.apiKey
-        ? await this.traducirOficial(texto, de, a)
+      return this.clienteAws
+        ? await this.traducirAws(texto, de, a)
         : await this.traducirGratuito(texto, de, a);
     } catch (error) {
       this.logger.warn(
@@ -45,20 +58,15 @@ export class TraduccionService {
     return Object.fromEntries(entradas) as T;
   }
 
-  private async traducirOficial(texto: string, de: string, a: string) {
-    const respuesta = await fetch(
-      `https://translation.googleapis.com/language/translate/v2?key=${this.apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: texto, source: de, target: a, format: 'text' }),
-      },
+  private async traducirAws(texto: string, de: string, a: string) {
+    const respuesta = await this.clienteAws!.send(
+      new TranslateTextCommand({
+        Text: texto,
+        SourceLanguageCode: de,
+        TargetLanguageCode: a,
+      }),
     );
-    if (!respuesta.ok) throw new Error(`API oficial HTTP ${respuesta.status}`);
-    const datos = (await respuesta.json()) as {
-      data: { translations: { translatedText: string }[] };
-    };
-    return datos.data.translations[0].translatedText;
+    return respuesta.TranslatedText ?? texto;
   }
 
   private async traducirGratuito(texto: string, de: string, a: string) {
