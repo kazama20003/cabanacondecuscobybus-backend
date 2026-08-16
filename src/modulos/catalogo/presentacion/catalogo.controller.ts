@@ -1,5 +1,6 @@
 ﻿import {
   Body,
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -31,6 +32,8 @@ function aplicar(decoradores: PropertyDecorator[]): PropertyDecorator {
 import { PaginacionDto } from '../../../compartido/paginacion';
 import { Roles } from '../../autenticacion/presentacion/roles';
 import { CatalogoService } from '../aplicacion/catalogo.service';
+
+const IDIOMAS_CATALOGO = ['es', 'en', 'fr', 'it', 'pt', 'zh', 'ja', 'ru', 'de'];
 
 class FiltrosTransportesDto extends PaginacionDto {
   @IsOptional() @IsString() origen?: string;
@@ -66,6 +69,11 @@ class ParadaDto {
   @IsInt() @Min(0) minutos: number;
   @IsOptional() @IsInt() @Min(0) duracionParadaMinutos?: number;
   @IsOptional() @IsString() descripcion?: string;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MedioDto)
+  medios?: MedioDto[];
 }
 class CrearTransporteDto {
   @IsString() slug: string;
@@ -118,6 +126,11 @@ class ItemItinerarioDto {
   @IsString() descripcion: string;
   @IsOptional() @aplicar(EsLatitud()) latitud?: number;
   @IsOptional() @aplicar(EsLongitud()) longitud?: number;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MedioDto)
+  medios?: MedioDto[];
 }
 class DefinirItinerarioDto {
   @IsArray()
@@ -239,6 +252,9 @@ export class CatalogoController {
     @Param('idioma') idioma: string,
     @Body() datos: EditarTraduccionDto,
   ) {
+    if (!IDIOMAS_CATALOGO.includes(idioma)) {
+      throw new BadRequestException('Idioma no soportado');
+    }
     return this.servicio.guardarTraduccion(
       tipo === 'tours' ? 'tour' : 'transporte',
       id,
