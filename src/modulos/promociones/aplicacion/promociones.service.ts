@@ -28,6 +28,7 @@ export interface DatosPromocion {
   fechaFin: Date;
   limiteUsos?: number;
   imagenUrl?: string;
+  imagenClave?: string;
   activo?: boolean;
 }
 

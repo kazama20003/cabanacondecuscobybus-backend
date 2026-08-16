@@ -39,6 +39,7 @@ class CrearPromocionDto {
   @IsDateString() fechaFin: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) limiteUsos?: number;
   @IsOptional() @IsString() imagenUrl?: string;
+  @IsOptional() @IsString() imagenClave?: string;
   @IsOptional() @IsBoolean() activo?: boolean;
 }
 
@@ -56,6 +57,7 @@ class ActualizarPromocionDto {
   @IsOptional() @IsDateString() fechaFin?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) limiteUsos?: number;
   @IsOptional() @IsString() imagenUrl?: string;
+  @IsOptional() @IsString() imagenClave?: string;
   @IsOptional() @IsBoolean() activo?: boolean;
 }
 

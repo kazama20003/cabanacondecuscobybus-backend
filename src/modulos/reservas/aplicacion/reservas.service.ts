@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
+import { NotificacionesService } from '../../../compartido/notificaciones/notificaciones.service';
 import { IzipayService } from '../../pagos/aplicacion/izipay.service';
 import { PromocionesService } from '../../promociones/aplicacion/promociones.service';
 
@@ -30,6 +31,7 @@ export class ReservasService {
     private readonly prisma: PrismaService,
     private readonly izipay: IzipayService,
     private readonly promociones: PromocionesService,
+    private readonly notificaciones: NotificacionesService,
   ) {}
 
   async crear(datos: {
@@ -54,7 +56,7 @@ export class ReservasService {
         )
       : null;
 
-    return this.prisma.$transaction(
+    const reserva = await this.prisma.$transaction(
       async (tx) => {
         const salida =
           datos.tipoServicio === 'TRANSPORTE'
@@ -133,6 +135,8 @@ export class ReservasService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    void this.notificaciones.reservaCreada(reserva);
+    return reserva;
   }
 
   /** Reservas del usuario logueado (perfil del turista). */
@@ -237,7 +241,7 @@ export class ReservasService {
     ];
     if (!estadosConSaldo.includes(reserva.estado))
       throw new BadRequestException('La reserva no tiene saldo pendiente');
-    return this.prisma.pago.create({
+    const pago = await this.prisma.pago.create({
       data: {
         reservaId: reserva.id,
         monto: reserva.montoSaldo,
@@ -247,10 +251,13 @@ export class ReservasService {
         urlComprobante: datos.urlComprobante,
       },
     });
+    void this.notificaciones.comprobanteRegistrado(reserva);
+    return pago;
   }
 
   async confirmarPago(pagoId: string, administradorId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    let pagoFueConfirmado = false;
+    const pago = await this.prisma.$transaction(async (tx) => {
       const pago = await tx.pago.findUnique({
         where: { id: pagoId },
         include: { reserva: true },
@@ -265,6 +272,7 @@ export class ReservasService {
           confirmadoEn: new Date(),
         },
       });
+      pagoFueConfirmado = true;
       const estado =
         pago.esAdelanto && pago.reserva.montoSaldo.gt(0)
           ? EstadoReserva.SALDO_PENDIENTE
@@ -280,6 +288,11 @@ export class ReservasService {
       });
       return { ...pago, estado: EstadoPago.APROBADO };
     });
+    if (pagoFueConfirmado) {
+      const reserva = await this.prisma.reserva.findUnique({ where: { id: pago.reservaId } });
+      if (reserva) void this.notificaciones.pagoAprobado(reserva);
+    }
+    return pago;
   }
 
   private codigo() {

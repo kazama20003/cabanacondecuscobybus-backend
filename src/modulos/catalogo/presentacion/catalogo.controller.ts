@@ -1,6 +1,7 @@
 ﻿import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -54,6 +55,7 @@ class EditarTraduccionDto {
 }
 class MedioDto {
   @IsString() url: string;
+  @IsOptional() @IsString() clave?: string;
   @IsOptional() @IsString() textoAlterno?: string;
   @IsOptional() @IsIn(['IMAGEN', 'VIDEO']) tipo?: 'IMAGEN' | 'VIDEO';
 }
@@ -207,6 +209,16 @@ export class CatalogoController {
     @Body() datos: CrearTourDto,
   ) {
     return this.servicio.crearTour(datos);
+  }
+  @Delete('administracion/transportes/:id')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  eliminarTransporte(@Param('id') id: string) {
+    return this.servicio.eliminarTransporte(id);
+  }
+  @Delete('administracion/tours/:id')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  eliminarTour(@Param('id') id: string) {
+    return this.servicio.eliminarTour(id);
   }
   @Get('administracion/:tipo/:id/traducciones')
   @Roles('ADMINISTRADOR', 'OPERADOR')

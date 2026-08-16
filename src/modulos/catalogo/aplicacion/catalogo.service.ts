@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   EstadoSalida,
   EstadoTraduccion,
@@ -17,6 +17,7 @@ interface ParadaEntrada {
 
 interface MedioEntrada {
   url: string;
+  clave?: string;
   textoAlterno?: string;
   tipo?: TipoMedio;
 }
@@ -26,7 +27,7 @@ import {
   rangoPaginacion,
 } from '../../../compartido/paginacion';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
-import { TraduccionService } from '../../../compartido/traduccion/traduccion.service';
+import { UploadsService } from '../../uploads/aplicacion/uploads.service';
 
 interface ContenidoEntrada {
   titulo: string;
@@ -35,14 +36,11 @@ interface ContenidoEntrada {
   queLlevar?: string;
 }
 
-/** Idiomas a los que se traduce automáticamente desde el español. */
-const IDIOMAS_DESTINO = ['en'];
-
 @Injectable()
 export class CatalogoService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly traduccion: TraduccionService,
+    private readonly uploads: UploadsService,
   ) {}
 
   async listarTransportes(
@@ -83,11 +81,14 @@ export class CatalogoService {
       include: {
         paradas: { orderBy: { orden: 'asc' } },
         imagenes: { orderBy: { orden: 'asc' } },
-        traducciones: { where: { idioma, estado: EstadoTraduccion.PUBLICADA } },
+        traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
       },
     });
     if (!transporte) throw new NotFoundException('Transporte no encontrado');
-    return transporte;
+    const traduccion =
+      transporte.traducciones.find((item) => item.idioma === idioma) ??
+      transporte.traducciones.find((item) => item.idioma === 'es');
+    return { ...transporte, traducciones: traduccion ? [traduccion] : [] };
   }
 
   async listarTours(paginacion: PaginacionDto, destino?: string) {
@@ -121,11 +122,14 @@ export class CatalogoService {
       include: {
         itinerarios: { orderBy: { orden: 'asc' } },
         imagenes: { orderBy: { orden: 'asc' } },
-        traducciones: { where: { idioma, estado: EstadoTraduccion.PUBLICADA } },
+        traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
       },
     });
     if (!tour) throw new NotFoundException('Tour no encontrado');
-    return tour;
+    const traduccion =
+      tour.traducciones.find((item) => item.idioma === idioma) ??
+      tour.traducciones.find((item) => item.idioma === 'es');
+    return { ...tour, traducciones: traduccion ? [traduccion] : [] };
   }
 
   buscarSalidasTransporte(
@@ -232,6 +236,7 @@ export class CatalogoService {
           ? {
               create: medios.map((medio, indice) => ({
                 url: medio.url,
+                clave: medio.clave,
                 textoAlterno: medio.textoAlterno,
                 tipo: medio.tipo ?? TipoMedio.IMAGEN,
                 orden: indice,
@@ -290,6 +295,7 @@ export class CatalogoService {
           ? {
               create: medios.map((medio, indice) => ({
                 url: medio.url,
+                clave: medio.clave,
                 textoAlterno: medio.textoAlterno,
                 tipo: medio.tipo ?? TipoMedio.IMAGEN,
                 orden: indice,
@@ -446,26 +452,49 @@ export class CatalogoService {
     return this.prisma.salidaTour.update({ where: { id }, data });
   }
 
-  /** Crea la traducción base 'es' y las automáticas (Google Translate). */
+  /** Guarda contenido revisado; las demás traducciones se redactan manualmente. */
   private async generarTraducciones(
     tipo: 'transporte' | 'tour',
     id: string,
     contenido: ContenidoEntrada,
   ) {
     await this.guardarTraduccion(tipo, id, 'es', contenido, 'PUBLICADA');
-    for (const idioma of IDIOMAS_DESTINO) {
-      const traducido = await this.traduccion.traducirCampos(
-        {
-          titulo: contenido.titulo,
-          resumen: contenido.resumen,
-          descripcion: contenido.descripcion,
-          ...(contenido.queLlevar ? { queLlevar: contenido.queLlevar } : {}),
-        },
-        'es',
-        idioma,
-      );
-      await this.guardarTraduccion(tipo, id, idioma, traducido, 'PUBLICADA');
+  }
+
+  async eliminarTransporte(id: string) {
+    const transporte = await this.prisma.transporte.findUnique({
+      where: { id },
+      include: { imagenes: true, _count: { select: { salidas: true } } },
+    });
+    if (!transporte) throw new NotFoundException('Transporte no encontrado');
+    if (transporte._count.salidas) {
+      throw new ConflictException('No se puede eliminar un transporte con salidas registradas');
     }
+    await this.prisma.transporte.delete({ where: { id } });
+    await Promise.all(
+      transporte.imagenes.map((imagen) =>
+        this.uploads.eliminarSilenciosamente(imagen.clave, imagen.tipo, 'transportes'),
+      ),
+    );
+    return { mensaje: 'Transporte eliminado' };
+  }
+
+  async eliminarTour(id: string) {
+    const tour = await this.prisma.tour.findUnique({
+      where: { id },
+      include: { imagenes: true, _count: { select: { salidas: true } } },
+    });
+    if (!tour) throw new NotFoundException('Tour no encontrado');
+    if (tour._count.salidas) {
+      throw new ConflictException('No se puede eliminar un tour con salidas registradas');
+    }
+    await this.prisma.tour.delete({ where: { id } });
+    await Promise.all(
+      tour.imagenes.map((imagen) =>
+        this.uploads.eliminarSilenciosamente(imagen.clave, imagen.tipo, 'tours'),
+      ),
+    );
+    return { mensaje: 'Tour eliminado' };
   }
 
   listarTraducciones(tipo: 'transporte' | 'tour', id: string) {

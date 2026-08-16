@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EstadoPago, EstadoReserva } from '@prisma/client';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
+import { NotificacionesService } from '../../../compartido/notificaciones/notificaciones.service';
 import { AnswerIpn, IzipayService } from './izipay.service';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class PagosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly izipay: IzipayService,
+    private readonly notificaciones: NotificacionesService,
   ) {}
 
   /** Procesa la notificación IPN de Izipay (firma ya validada por el controller). */
@@ -56,6 +58,7 @@ export class PagosService {
           },
         }),
       ]);
+      void this.notificaciones.pagoAprobado(pago.reserva);
       this.logger.log(`Pago ${pago.id} aprobado vía Izipay`);
       return { mensaje: 'Pago aprobado' };
     }

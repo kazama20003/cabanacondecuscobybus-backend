@@ -311,6 +311,7 @@ model Promocion {
   limiteUsos           Int?               @map("limite_usos")
   usos                 Int                @default(0)
   imagenUrl            String?            @map("imagen_url")
+  imagenClave          String?            @map("imagen_clave")
   activo               Boolean            @default(true)
   creadoEn             DateTime           @default(now()) @map("creado_en")
   actualizadoEn        DateTime           @updatedAt @map("actualizado_en")
@@ -365,6 +366,7 @@ model Imagen {
   transporteId  String?      @map("transporte_id") @db.Uuid
   tourId        String?      @map("tour_id") @db.Uuid
   url           String
+  clave         String?
   textoAlterno  String?      @map("texto_alterno")
   orden         Int          @default(0)
   tipo          TipoMedio    @default(IMAGEN)
