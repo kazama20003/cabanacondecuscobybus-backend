@@ -1,4 +1,5 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   EstadoSalida,
   EstadoTraduccion,
@@ -13,6 +14,7 @@ interface ParadaEntrada {
   minutos: number;
   duracionParadaMinutos?: number;
   descripcion?: string;
+  medios?: MedioEntrada[];
 }
 
 interface MedioEntrada {
@@ -36,11 +38,16 @@ interface ContenidoEntrada {
   queLlevar?: string;
 }
 
+const IDIOMAS_CATALOGO = ['es', 'en', 'fr', 'it', 'pt', 'zh', 'ja', 'ru', 'de'];
+
 @Injectable()
 export class CatalogoService {
+  private readonly logger = new Logger(CatalogoService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploads: UploadsService,
+    private readonly configuracion: ConfigService,
   ) {}
 
   async listarTransportes(
@@ -63,7 +70,7 @@ export class CatalogoService {
         where,
         include: {
           traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
-          paradas: { orderBy: { orden: 'asc' } },
+          paradas: { include: { imagenes: { orderBy: { orden: 'asc' } } }, orderBy: { orden: 'asc' } },
           salidas: { orderBy: { fechaHoraSalida: 'asc' } },
         },
         orderBy: { creadoEn: 'desc' },
@@ -79,7 +86,7 @@ export class CatalogoService {
     const transporte = await this.prisma.transporte.findFirst({
       where: { slug, activo: true },
       include: {
-        paradas: { orderBy: { orden: 'asc' } },
+        paradas: { include: { imagenes: { orderBy: { orden: 'asc' } } }, orderBy: { orden: 'asc' } },
         imagenes: { orderBy: { orden: 'asc' } },
         traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
       },
@@ -120,7 +127,7 @@ export class CatalogoService {
     const tour = await this.prisma.tour.findFirst({
       where: { slug, activo: true },
       include: {
-        itinerarios: { orderBy: { orden: 'asc' } },
+        itinerarios: { include: { imagenes: { orderBy: { orden: 'asc' } } }, orderBy: { orden: 'asc' } },
         imagenes: { orderBy: { orden: 'asc' } },
         traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
       },
@@ -191,7 +198,7 @@ export class CatalogoService {
     return this.prisma.transporte.findUnique({
       where: { id: transporte.id },
       include: {
-        paradas: { orderBy: { orden: 'asc' } },
+        paradas: { include: { imagenes: { orderBy: { orden: 'asc' } } }, orderBy: { orden: 'asc' } },
         imagenes: { orderBy: { orden: 'asc' } },
         traducciones: true,
       },
@@ -229,6 +236,9 @@ export class CatalogoService {
                 minutos: parada.minutos,
                 duracionParadaMinutos: parada.duracionParadaMinutos ?? 0,
                 descripcion: parada.descripcion,
+                imagenes: parada.medios?.length
+                  ? { create: parada.medios.map((medio, orden) => ({ ...medio, tipo: medio.tipo ?? TipoMedio.IMAGEN, orden })) }
+                  : undefined,
               })),
             }
           : undefined,
@@ -245,7 +255,7 @@ export class CatalogoService {
           : undefined,
       },
       include: {
-        paradas: { orderBy: { orden: 'asc' } },
+        paradas: { include: { imagenes: { orderBy: { orden: 'asc' } } }, orderBy: { orden: 'asc' } },
         imagenes: { orderBy: { orden: 'asc' } },
       },
     });
@@ -310,15 +320,20 @@ export class CatalogoService {
   /** Define el itinerario completo del tour (reemplaza el set, orden = posición). */
   async definirItinerario(
     tourId: string,
-    items: {
+      items: {
       titulo: string;
       descripcion: string;
       latitud?: number;
-      longitud?: number;
+        longitud?: number;
+        medios?: MedioEntrada[];
     }[],
   ) {
     const tour = await this.prisma.tour.findUnique({ where: { id: tourId } });
     if (!tour) throw new NotFoundException('Tour no encontrado');
+    const imagenesAnteriores = await this.prisma.imagen.findMany({
+      where: { itinerarioTour: { tourId } },
+      select: { clave: true, tipo: true },
+    });
 
     await this.prisma.$transaction([
       this.prisma.itinerarioTour.deleteMany({ where: { tourId } }),
@@ -334,11 +349,23 @@ export class CatalogoService {
             item.longitud !== undefined
               ? new Prisma.Decimal(item.longitud)
               : null,
+          imagenes: item.medios?.length
+            ? { create: item.medios.map((medio, orden) => ({ ...medio, tipo: medio.tipo ?? TipoMedio.IMAGEN, orden })) }
+            : undefined,
         })),
       }),
     ]);
+    const clavesConservadas = new Set(
+      items.flatMap((item) => item.medios?.map((medio) => medio.clave) ?? []),
+    );
+    await Promise.all(
+      imagenesAnteriores
+        .filter((imagen) => imagen.clave && !clavesConservadas.has(imagen.clave))
+        .map((imagen) => this.uploads.eliminarSilenciosamente(imagen.clave, imagen.tipo, 'tours')),
+    );
     return this.prisma.itinerarioTour.findMany({
       where: { tourId },
+      include: { imagenes: { orderBy: { orden: 'asc' } } },
       orderBy: { orden: 'asc' },
     });
   }
@@ -452,13 +479,82 @@ export class CatalogoService {
     return this.prisma.salidaTour.update({ where: { id }, data });
   }
 
-  /** Guarda contenido revisado; las demás traducciones se redactan manualmente. */
+  /** Traduce y publica el contenido inicial en todos los idiomas soportados. */
   private async generarTraducciones(
     tipo: 'transporte' | 'tour',
     id: string,
     contenido: ContenidoEntrada,
   ) {
     await this.guardarTraduccion(tipo, id, 'es', contenido, 'PUBLICADA');
+    await Promise.all(
+      IDIOMAS_CATALOGO.filter((idioma) => idioma !== 'es').map(
+        async (idioma) => {
+          try {
+            const traduccion = await this.traducirContenido(contenido, idioma);
+            await this.guardarTraduccion(tipo, id, idioma, traduccion, 'PUBLICADA');
+          } catch (error) {
+            this.logger.error(`No se pudo traducir automáticamente al idioma ${idioma}`, error);
+            await this.guardarTraduccion(tipo, id, idioma, contenido, 'BORRADOR');
+          }
+        },
+      ),
+    );
+  }
+
+  private async traducirContenido(contenido: ContenidoEntrada, idioma: string) {
+    const textos = [
+      contenido.titulo,
+      contenido.resumen,
+      contenido.descripcion,
+      contenido.queLlevar ?? '',
+    ];
+    const traducciones = await this.traducirTextos(textos, idioma);
+    return {
+      titulo: traducciones[0],
+      resumen: traducciones[1],
+      descripcion: traducciones[2],
+      queLlevar: traducciones[3] || undefined,
+    };
+  }
+
+  private async traducirTextos(textos: string[], idioma: string): Promise<string[]> {
+    const apiKey = this.configuracion.get<string>('GOOGLE_TRANSLATE_API_KEY');
+    if (apiKey) {
+      const respuesta = await fetch(
+        `https://translation.googleapis.com/language/translate/v2?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ q: textos, source: 'es', target: idioma, format: 'text' }),
+        },
+      );
+      if (!respuesta.ok) throw new Error(`Google Translate respondió ${respuesta.status}`);
+      const datos = (await respuesta.json()) as {
+        data?: { translations?: { translatedText: string }[] };
+      };
+      const traducciones = datos.data?.translations?.map((item) => item.translatedText);
+      if (!traducciones || traducciones.length !== textos.length) {
+        throw new Error('Google Translate devolvió una respuesta incompleta');
+      }
+      return traducciones;
+    }
+
+    return Promise.all(
+      textos.map(async (texto) => {
+        if (!texto) return '';
+        const parametros = new URLSearchParams({
+          client: 'gtx',
+          sl: 'es',
+          tl: idioma,
+          dt: 't',
+          q: texto,
+        });
+        const respuesta = await fetch(`https://translate.googleapis.com/translate_a/single?${parametros}`);
+        if (!respuesta.ok) throw new Error(`Servicio de traducción respondió ${respuesta.status}`);
+        const datos = (await respuesta.json()) as [Array<[string]>];
+        return datos[0].map((fragmento) => fragmento[0]).join('');
+      }),
+    );
   }
 
   async eliminarTransporte(id: string) {
@@ -518,6 +614,7 @@ export class CatalogoService {
       titulo?: string;
       resumen?: string;
       descripcion?: string;
+      medios?: MedioEntrada[];
       queLlevar?: string;
     },
     estado: 'BORRADOR' | 'PUBLICADA' = 'PUBLICADA',
@@ -551,12 +648,17 @@ export class CatalogoService {
       minutos: number;
       duracionParadaMinutos?: number;
       descripcion?: string;
+      medios?: MedioEntrada[];
     }[],
   ) {
     const transporte = await this.prisma.transporte.findUnique({
       where: { id: transporteId },
     });
     if (!transporte) throw new NotFoundException('Transporte no encontrado');
+    const imagenesAnteriores = await this.prisma.imagen.findMany({
+      where: { paradaTransporte: { transporteId } },
+      select: { clave: true, tipo: true },
+    });
 
     await this.prisma.$transaction([
       this.prisma.paradaTransporte.deleteMany({ where: { transporteId } }),
@@ -570,11 +672,25 @@ export class CatalogoService {
           minutos: parada.minutos,
           duracionParadaMinutos: parada.duracionParadaMinutos ?? 0,
           descripcion: parada.descripcion,
+          imagenes: parada.medios?.length
+            ? { create: parada.medios.map((medio, orden) => ({ ...medio, tipo: medio.tipo ?? TipoMedio.IMAGEN, orden })) }
+            : undefined,
         })),
       }),
     ]);
+    const clavesConservadas = new Set(
+      paradas.flatMap((parada) => parada.medios?.map((medio) => medio.clave) ?? []),
+    );
+    await Promise.all(
+      imagenesAnteriores
+        .filter((imagen) => imagen.clave && !clavesConservadas.has(imagen.clave))
+        .map((imagen) =>
+          this.uploads.eliminarSilenciosamente(imagen.clave, imagen.tipo, 'transportes'),
+        ),
+    );
     return this.prisma.paradaTransporte.findMany({
       where: { transporteId },
+      include: { imagenes: { orderBy: { orden: 'asc' } } },
       orderBy: { orden: 'asc' },
     });
   }

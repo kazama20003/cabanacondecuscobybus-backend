@@ -81,177 +81,179 @@ enum EstadoTraduccion {
 }
 
 model Usuario {
-  id                String      @id @default(uuid()) @db.Uuid
-  correo            String      @unique
-  contrasenaHash    String?     @map("contrasena_hash")
-  googleId          String?     @unique @map("google_id")
-  nombres           String
-  apellidos         String
-  telefonoWhatsApp  String?     @map("telefono_whatsapp")
-  paisResidencia    String?     @map("pais_residencia")
-  rol               RolUsuario  @default(CLIENTE)
-  activo            Boolean     @default(true)
-  creadoEn          DateTime    @default(now()) @map("creado_en")
-  actualizadoEn     DateTime    @updatedAt @map("actualizado_en")
-  reservas          Reserva[]
-  pagosConfirmados  Pago[]      @relation("pagos_confirmados_por")
+  id               String     @id @default(uuid()) @db.Uuid
+  correo           String     @unique
+  contrasenaHash   String?    @map("contrasena_hash")
+  googleId         String?    @unique @map("google_id")
+  nombres          String
+  apellidos        String
+  telefonoWhatsApp String?    @map("telefono_whatsapp")
+  paisResidencia   String?    @map("pais_residencia")
+  rol              RolUsuario @default(CLIENTE)
+  activo           Boolean    @default(true)
+  creadoEn         DateTime   @default(now()) @map("creado_en")
+  actualizadoEn    DateTime   @updatedAt @map("actualizado_en")
+  reservas         Reserva[]
+  pagosConfirmados Pago[]     @relation("pagos_confirmados_por")
 
   @@map("usuarios")
 }
 
 model Transporte {
-  id                       String                  @id @default(uuid()) @db.Uuid
-  slug                     String                  @unique
-  activo                   Boolean                 @default(true)
-  origenNombre             String                  @map("origen_nombre")
-  origenLatitud            Decimal                 @db.Decimal(10, 7) @map("origen_latitud")
-  origenLongitud           Decimal                 @db.Decimal(10, 7) @map("origen_longitud")
-  destinoNombre            String                  @map("destino_nombre")
-  destinoLatitud           Decimal                 @db.Decimal(10, 7) @map("destino_latitud")
-  destinoLongitud          Decimal                 @db.Decimal(10, 7) @map("destino_longitud")
-  duracionMinutosEstimada  Int                    @map("duracion_minutos_estimada")
-  creadoEn                 DateTime               @default(now()) @map("creado_en")
-  actualizadoEn            DateTime               @updatedAt @map("actualizado_en")
-  paradas                  ParadaTransporte[]
-  salidas                  SalidaTransporte[]
-  traducciones             TraduccionTransporte[]
-  imagenes                 Imagen[]
+  id                      String                 @id @default(uuid()) @db.Uuid
+  slug                    String                 @unique
+  activo                  Boolean                @default(true)
+  origenNombre            String                 @map("origen_nombre")
+  origenLatitud           Decimal                @map("origen_latitud") @db.Decimal(10, 7)
+  origenLongitud          Decimal                @map("origen_longitud") @db.Decimal(10, 7)
+  destinoNombre           String                 @map("destino_nombre")
+  destinoLatitud          Decimal                @map("destino_latitud") @db.Decimal(10, 7)
+  destinoLongitud         Decimal                @map("destino_longitud") @db.Decimal(10, 7)
+  duracionMinutosEstimada Int                    @map("duracion_minutos_estimada")
+  creadoEn                DateTime               @default(now()) @map("creado_en")
+  actualizadoEn           DateTime               @updatedAt @map("actualizado_en")
+  paradas                 ParadaTransporte[]
+  salidas                 SalidaTransporte[]
+  traducciones            TraduccionTransporte[]
+  imagenes                Imagen[]
 
   @@map("transportes")
 }
 
 model ParadaTransporte {
-  id          String      @id @default(uuid()) @db.Uuid
-  transporteId String     @map("transporte_id") @db.Uuid
-  orden       Int
-  nombre      String
-  latitud     Decimal     @db.Decimal(10, 7)
-  longitud    Decimal     @db.Decimal(10, 7)
-  minutos     Int         @map("minutos")
-  duracionParadaMinutos Int     @default(0) @map("duracion_parada_minutos")
-  descripcion String?
-  transporte  Transporte  @relation(fields: [transporteId], references: [id], onDelete: Cascade)
+  id                    String     @id @default(uuid()) @db.Uuid
+  transporteId          String     @map("transporte_id") @db.Uuid
+  orden                 Int
+  nombre                String
+  latitud               Decimal    @db.Decimal(10, 7)
+  longitud              Decimal    @db.Decimal(10, 7)
+  minutos               Int        @map("minutos")
+  duracionParadaMinutos Int        @default(0) @map("duracion_parada_minutos")
+  descripcion           String?
+  transporte            Transporte @relation(fields: [transporteId], references: [id], onDelete: Cascade)
+  imagenes              Imagen[]
 
   @@unique([transporteId, orden])
   @@map("paradas_transporte")
 }
 
 model Tour {
-  id                     String             @id @default(uuid()) @db.Uuid
-  slug                   String             @unique
-  activo                 Boolean            @default(true)
-  destinoNombre          String             @map("destino_nombre")
-  destinoLatitud         Decimal            @db.Decimal(10, 7) @map("destino_latitud")
-  destinoLongitud        Decimal            @db.Decimal(10, 7) @map("destino_longitud")
-  duracionMinutos        Int                @map("duracion_minutos")
-  requiereGuia           Boolean            @default(true) @map("requiere_guia")
-  creadoEn               DateTime           @default(now()) @map("creado_en")
-  actualizadoEn          DateTime           @updatedAt @map("actualizado_en")
-  itinerarios            ItinerarioTour[]
-  salidas                SalidaTour[]
-  traducciones           TraduccionTour[]
-  imagenes               Imagen[]
+  id              String           @id @default(uuid()) @db.Uuid
+  slug            String           @unique
+  activo          Boolean          @default(true)
+  destinoNombre   String           @map("destino_nombre")
+  destinoLatitud  Decimal          @map("destino_latitud") @db.Decimal(10, 7)
+  destinoLongitud Decimal          @map("destino_longitud") @db.Decimal(10, 7)
+  duracionMinutos Int              @map("duracion_minutos")
+  requiereGuia    Boolean          @default(true) @map("requiere_guia")
+  creadoEn        DateTime         @default(now()) @map("creado_en")
+  actualizadoEn   DateTime         @updatedAt @map("actualizado_en")
+  itinerarios     ItinerarioTour[]
+  salidas         SalidaTour[]
+  traducciones    TraduccionTour[]
+  imagenes        Imagen[]
 
   @@map("tours")
 }
 
 model ItinerarioTour {
-  id          String  @id @default(uuid()) @db.Uuid
-  tourId      String  @map("tour_id") @db.Uuid
+  id          String   @id @default(uuid()) @db.Uuid
+  tourId      String   @map("tour_id") @db.Uuid
   orden       Int
   titulo      String
   descripcion String
   latitud     Decimal? @db.Decimal(10, 7)
   longitud    Decimal? @db.Decimal(10, 7)
-  tour        Tour    @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  imagenes    Imagen[]
 
   @@unique([tourId, orden])
   @@map("itinerarios_tour")
 }
 
 model Vehiculo {
-  id             String       @id @default(uuid()) @db.Uuid
-  placa          String       @unique
-  tipoPropiedad  TipoVehiculo @map("tipo_propiedad")
-  proveedor      String?
-  capacidad      Int
-  activo         Boolean      @default(true)
-  creadoEn       DateTime     @default(now()) @map("creado_en")
-  salidas        SalidaTransporte[]
+  id            String             @id @default(uuid()) @db.Uuid
+  placa         String             @unique
+  tipoPropiedad TipoVehiculo       @map("tipo_propiedad")
+  proveedor     String?
+  capacidad     Int
+  activo        Boolean            @default(true)
+  creadoEn      DateTime           @default(now()) @map("creado_en")
+  salidas       SalidaTransporte[]
 
   @@map("vehiculos")
 }
 
 model SalidaTransporte {
-  id                    String         @id @default(uuid()) @db.Uuid
-  transporteId          String         @map("transporte_id") @db.Uuid
-  vehiculoId            String?        @map("vehiculo_id") @db.Uuid
-  fechaHoraSalida       DateTime       @map("fecha_hora_salida")
-  fechaHoraLlegada      DateTime?      @map("fecha_hora_llegada")
-  capacidad             Int
-  minimoPasajeros       Int            @default(2) @map("minimo_pasajeros")
-  precioPen             Decimal        @db.Decimal(10, 2) @map("precio_pen")
-  precioUsd             Decimal        @db.Decimal(10, 2) @map("precio_usd")
-  permiteAdelanto       Boolean        @default(true) @map("permite_adelanto")
-  porcentajeAdelanto    Int            @default(50) @map("porcentaje_adelanto")
-  estado                EstadoSalida   @default(BORRADOR)
-  creadoEn              DateTime       @default(now()) @map("creado_en")
-  actualizadoEn         DateTime       @updatedAt @map("actualizado_en")
-  transporte            Transporte     @relation(fields: [transporteId], references: [id], onDelete: Restrict)
-  vehiculo              Vehiculo?      @relation(fields: [vehiculoId], references: [id], onDelete: SetNull)
-  reservas              Reserva[]
+  id                 String       @id @default(uuid()) @db.Uuid
+  transporteId       String       @map("transporte_id") @db.Uuid
+  vehiculoId         String?      @map("vehiculo_id") @db.Uuid
+  fechaHoraSalida    DateTime     @map("fecha_hora_salida")
+  fechaHoraLlegada   DateTime?    @map("fecha_hora_llegada")
+  capacidad          Int
+  minimoPasajeros    Int          @default(2) @map("minimo_pasajeros")
+  precioPen          Decimal      @map("precio_pen") @db.Decimal(10, 2)
+  precioUsd          Decimal      @map("precio_usd") @db.Decimal(10, 2)
+  permiteAdelanto    Boolean      @default(true) @map("permite_adelanto")
+  porcentajeAdelanto Int          @default(50) @map("porcentaje_adelanto")
+  estado             EstadoSalida @default(BORRADOR)
+  creadoEn           DateTime     @default(now()) @map("creado_en")
+  actualizadoEn      DateTime     @updatedAt @map("actualizado_en")
+  transporte         Transporte   @relation(fields: [transporteId], references: [id], onDelete: Restrict)
+  vehiculo           Vehiculo?    @relation(fields: [vehiculoId], references: [id], onDelete: SetNull)
+  reservas           Reserva[]
 
   @@index([transporteId, fechaHoraSalida])
   @@map("salidas_transporte")
 }
 
 model SalidaTour {
-  id                    String        @id @default(uuid()) @db.Uuid
-  tourId                String        @map("tour_id") @db.Uuid
-  fechaHoraSalida       DateTime      @map("fecha_hora_salida")
-  capacidad             Int
-  minimoPasajeros       Int            @default(1) @map("minimo_pasajeros")
-  precioPen             Decimal        @db.Decimal(10, 2) @map("precio_pen")
-  precioUsd             Decimal        @db.Decimal(10, 2) @map("precio_usd")
-  permiteAdelanto       Boolean        @default(true) @map("permite_adelanto")
-  porcentajeAdelanto    Int            @default(50) @map("porcentaje_adelanto")
-  estado                EstadoSalida  @default(BORRADOR)
-  creadoEn              DateTime      @default(now()) @map("creado_en")
-  actualizadoEn         DateTime      @updatedAt @map("actualizado_en")
-  tour                  Tour          @relation(fields: [tourId], references: [id], onDelete: Restrict)
-  reservas              Reserva[]
+  id                 String       @id @default(uuid()) @db.Uuid
+  tourId             String       @map("tour_id") @db.Uuid
+  fechaHoraSalida    DateTime     @map("fecha_hora_salida")
+  capacidad          Int
+  minimoPasajeros    Int          @default(1) @map("minimo_pasajeros")
+  precioPen          Decimal      @map("precio_pen") @db.Decimal(10, 2)
+  precioUsd          Decimal      @map("precio_usd") @db.Decimal(10, 2)
+  permiteAdelanto    Boolean      @default(true) @map("permite_adelanto")
+  porcentajeAdelanto Int          @default(50) @map("porcentaje_adelanto")
+  estado             EstadoSalida @default(BORRADOR)
+  creadoEn           DateTime     @default(now()) @map("creado_en")
+  actualizadoEn      DateTime     @updatedAt @map("actualizado_en")
+  tour               Tour         @relation(fields: [tourId], references: [id], onDelete: Restrict)
+  reservas           Reserva[]
 
   @@index([tourId, fechaHoraSalida])
   @@map("salidas_tour")
 }
 
 model Reserva {
-  id                    String              @id @default(uuid()) @db.Uuid
-  codigo                String              @unique
-  usuarioId             String?             @map("usuario_id") @db.Uuid
-  salidaTransporteId    String?             @map("salida_transporte_id") @db.Uuid
-  salidaTourId          String?             @map("salida_tour_id") @db.Uuid
-  correoContacto        String              @map("correo_contacto")
-  telefonoWhatsApp      String              @map("telefono_whatsapp")
-  paisResidencia        String?             @map("pais_residencia")
-  cantidadPasajeros     Int                 @map("cantidad_pasajeros")
-  moneda                Moneda
-  montoTotal            Decimal             @db.Decimal(10, 2) @map("monto_total")
-  montoAdelanto         Decimal             @db.Decimal(10, 2) @map("monto_adelanto")
-  montoSaldo            Decimal             @db.Decimal(10, 2) @map("monto_saldo")
-  promocionId           String?             @map("promocion_id") @db.Uuid
-  montoDescuento        Decimal             @default(0) @db.Decimal(10, 2) @map("monto_descuento")
-  estado                EstadoReserva       @default(PENDIENTE_PAGO)
-  tokenGestionInvitado  String              @unique @map("token_gestion_invitado")
-  creadoEn              DateTime            @default(now()) @map("creado_en")
-  actualizadoEn         DateTime            @updatedAt @map("actualizado_en")
-  usuario               Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
-  salidaTransporte      SalidaTransporte?   @relation(fields: [salidaTransporteId], references: [id], onDelete: Restrict)
-  salidaTour            SalidaTour?         @relation(fields: [salidaTourId], references: [id], onDelete: Restrict)
-  promocion             Promocion?          @relation(fields: [promocionId], references: [id], onDelete: SetNull)
-  pasajeros             PasajeroReserva[]
-  pagos                 Pago[]
-  historial             HistorialReserva[]
+  id                   String             @id @default(uuid()) @db.Uuid
+  codigo               String             @unique
+  usuarioId            String?            @map("usuario_id") @db.Uuid
+  salidaTransporteId   String?            @map("salida_transporte_id") @db.Uuid
+  salidaTourId         String?            @map("salida_tour_id") @db.Uuid
+  correoContacto       String             @map("correo_contacto")
+  telefonoWhatsApp     String             @map("telefono_whatsapp")
+  paisResidencia       String?            @map("pais_residencia")
+  cantidadPasajeros    Int                @map("cantidad_pasajeros")
+  moneda               Moneda
+  montoTotal           Decimal            @map("monto_total") @db.Decimal(10, 2)
+  montoAdelanto        Decimal            @map("monto_adelanto") @db.Decimal(10, 2)
+  montoSaldo           Decimal            @map("monto_saldo") @db.Decimal(10, 2)
+  promocionId          String?            @map("promocion_id") @db.Uuid
+  montoDescuento       Decimal            @default(0) @map("monto_descuento") @db.Decimal(10, 2)
+  estado               EstadoReserva      @default(PENDIENTE_PAGO)
+  tokenGestionInvitado String             @unique @map("token_gestion_invitado")
+  creadoEn             DateTime           @default(now()) @map("creado_en")
+  actualizadoEn        DateTime           @updatedAt @map("actualizado_en")
+  usuario              Usuario?           @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  salidaTransporte     SalidaTransporte?  @relation(fields: [salidaTransporteId], references: [id], onDelete: Restrict)
+  salidaTour           SalidaTour?        @relation(fields: [salidaTourId], references: [id], onDelete: Restrict)
+  promocion            Promocion?         @relation(fields: [promocionId], references: [id], onDelete: SetNull)
+  pasajeros            PasajeroReserva[]
+  pagos                Pago[]
+  historial            HistorialReserva[]
 
   @@index([usuarioId])
   @@index([salidaTransporteId])
@@ -260,118 +262,122 @@ model Reserva {
 }
 
 model PasajeroReserva {
-  id              String   @id @default(uuid()) @db.Uuid
-  reservaId       String   @map("reserva_id") @db.Uuid
+  id              String  @id @default(uuid()) @db.Uuid
+  reservaId       String  @map("reserva_id") @db.Uuid
   nombres         String
   apellidos       String
   nacionalidad    String
-  tipoDocumento   String   @map("tipo_documento")
-  numeroDocumento String   @map("numero_documento")
-  reserva         Reserva  @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  tipoDocumento   String  @map("tipo_documento")
+  numeroDocumento String  @map("numero_documento")
+  reserva         Reserva @relation(fields: [reservaId], references: [id], onDelete: Cascade)
 
   @@map("pasajeros_reserva")
 }
 
 model Pago {
-  id                  String       @id @default(uuid()) @db.Uuid
-  reservaId           String       @map("reserva_id") @db.Uuid
-  confirmadoPorId     String?      @map("confirmado_por_id") @db.Uuid
-  monto               Decimal      @db.Decimal(10, 2)
+  id                  String     @id @default(uuid()) @db.Uuid
+  reservaId           String     @map("reserva_id") @db.Uuid
+  confirmadoPorId     String?    @map("confirmado_por_id") @db.Uuid
+  monto               Decimal    @db.Decimal(10, 2)
   moneda              Moneda
   metodo              MetodoPago
-  estado              EstadoPago  @default(PENDIENTE)
-  esAdelanto          Boolean     @default(false) @map("es_adelanto")
-  codigoOperacion     String?     @map("codigo_operacion")
-  urlComprobante      String?     @map("url_comprobante")
-  referenciaProveedor String?     @unique @map("referencia_proveedor")
-  creadoEn            DateTime    @default(now()) @map("creado_en")
-  confirmadoEn        DateTime?   @map("confirmado_en")
-  reserva             Reserva     @relation(fields: [reservaId], references: [id], onDelete: Restrict)
-  confirmadoPor       Usuario?    @relation("pagos_confirmados_por", fields: [confirmadoPorId], references: [id], onDelete: SetNull)
+  estado              EstadoPago @default(PENDIENTE)
+  esAdelanto          Boolean    @default(false) @map("es_adelanto")
+  codigoOperacion     String?    @map("codigo_operacion")
+  urlComprobante      String?    @map("url_comprobante")
+  referenciaProveedor String?    @unique @map("referencia_proveedor")
+  creadoEn            DateTime   @default(now()) @map("creado_en")
+  confirmadoEn        DateTime?  @map("confirmado_en")
+  reserva             Reserva    @relation(fields: [reservaId], references: [id], onDelete: Restrict)
+  confirmadoPor       Usuario?   @relation("pagos_confirmados_por", fields: [confirmadoPorId], references: [id], onDelete: SetNull)
 
   @@index([reservaId])
   @@map("pagos")
 }
 
 model Promocion {
-  id                   String             @id @default(uuid()) @db.Uuid
-  titulo               String
-  descripcion          String?
-  tipo                 TipoPromocion
-  objetivo             ObjetivoPromocion  @default(TODOS)
+  id                  String            @id @default(uuid()) @db.Uuid
+  titulo              String
+  descripcion         String?
+  tipo                TipoPromocion
+  objetivo            ObjetivoPromocion @default(TODOS)
   /// Cupón opcional; si existe, el cliente debe ingresarlo al reservar
-  codigo               String?            @unique
+  codigo              String?           @unique
   /// Descuento porcentual (1-100); excluyente con montoDescuento
-  porcentajeDescuento  Int?               @map("porcentaje_descuento")
+  porcentajeDescuento Int?              @map("porcentaje_descuento")
   /// Descuento de monto fijo en la moneda de la reserva
-  montoDescuento       Decimal?           @db.Decimal(10, 2) @map("monto_descuento")
-  fechaInicio          DateTime           @map("fecha_inicio")
-  fechaFin             DateTime           @map("fecha_fin")
+  montoDescuento      Decimal?          @map("monto_descuento") @db.Decimal(10, 2)
+  fechaInicio         DateTime          @map("fecha_inicio")
+  fechaFin            DateTime          @map("fecha_fin")
   /// Límite de usos totales (null = ilimitado)
-  limiteUsos           Int?               @map("limite_usos")
-  usos                 Int                @default(0)
-  imagenUrl            String?            @map("imagen_url")
-  imagenClave          String?            @map("imagen_clave")
-  activo               Boolean            @default(true)
-  creadoEn             DateTime           @default(now()) @map("creado_en")
-  actualizadoEn        DateTime           @updatedAt @map("actualizado_en")
-  reservas             Reserva[]
+  limiteUsos          Int?              @map("limite_usos")
+  usos                Int               @default(0)
+  imagenUrl           String?           @map("imagen_url")
+  imagenClave         String?           @map("imagen_clave")
+  activo              Boolean           @default(true)
+  creadoEn            DateTime          @default(now()) @map("creado_en")
+  actualizadoEn       DateTime          @updatedAt @map("actualizado_en")
+  reservas            Reserva[]
 
   @@index([activo, fechaInicio, fechaFin])
   @@map("promociones")
 }
 
 model HistorialReserva {
-  id         String         @id @default(uuid()) @db.Uuid
-  reservaId  String         @map("reserva_id") @db.Uuid
-  estado     EstadoReserva
-  detalle    String?
-  creadoEn   DateTime       @default(now()) @map("creado_en")
-  reserva    Reserva        @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  id        String        @id @default(uuid()) @db.Uuid
+  reservaId String        @map("reserva_id") @db.Uuid
+  estado    EstadoReserva
+  detalle   String?
+  creadoEn  DateTime      @default(now()) @map("creado_en")
+  reserva   Reserva       @relation(fields: [reservaId], references: [id], onDelete: Cascade)
 
   @@map("historial_reservas")
 }
 
 model TraduccionTransporte {
-  id            String            @id @default(uuid()) @db.Uuid
-  transporteId  String            @map("transporte_id") @db.Uuid
-  idioma        String            @db.VarChar(5)
-  titulo        String
-  resumen       String
-  descripcion   String
-  estado        EstadoTraduccion  @default(BORRADOR)
-  transporte    Transporte        @relation(fields: [transporteId], references: [id], onDelete: Cascade)
+  id           String           @id @default(uuid()) @db.Uuid
+  transporteId String           @map("transporte_id") @db.Uuid
+  idioma       String           @db.VarChar(5)
+  titulo       String
+  resumen      String
+  descripcion  String
+  estado       EstadoTraduccion @default(BORRADOR)
+  transporte   Transporte       @relation(fields: [transporteId], references: [id], onDelete: Cascade)
 
   @@unique([transporteId, idioma])
   @@map("traducciones_transporte")
 }
 
 model TraduccionTour {
-  id            String            @id @default(uuid()) @db.Uuid
-  tourId        String            @map("tour_id") @db.Uuid
-  idioma        String            @db.VarChar(5)
-  titulo        String
-  resumen       String
-  descripcion   String
-  queLlevar     String?           @map("que_llevar")
-  estado        EstadoTraduccion  @default(BORRADOR)
-  tour          Tour              @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  id          String           @id @default(uuid()) @db.Uuid
+  tourId      String           @map("tour_id") @db.Uuid
+  idioma      String           @db.VarChar(5)
+  titulo      String
+  resumen     String
+  descripcion String
+  queLlevar   String?          @map("que_llevar")
+  estado      EstadoTraduccion @default(BORRADOR)
+  tour        Tour             @relation(fields: [tourId], references: [id], onDelete: Cascade)
 
   @@unique([tourId, idioma])
   @@map("traducciones_tour")
 }
 
 model Imagen {
-  id            String       @id @default(uuid()) @db.Uuid
-  transporteId  String?      @map("transporte_id") @db.Uuid
-  tourId        String?      @map("tour_id") @db.Uuid
-  url           String
-  clave         String?
-  textoAlterno  String?      @map("texto_alterno")
-  orden         Int          @default(0)
-  tipo          TipoMedio    @default(IMAGEN)
-  transporte    Transporte?  @relation(fields: [transporteId], references: [id], onDelete: Cascade)
-  tour          Tour?        @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  id                 String            @id @default(uuid()) @db.Uuid
+  transporteId       String?           @map("transporte_id") @db.Uuid
+  tourId             String?           @map("tour_id") @db.Uuid
+  paradaTransporteId String?           @map("parada_transporte_id") @db.Uuid
+  itinerarioTourId   String?           @map("itinerario_tour_id") @db.Uuid
+  url                String
+  clave              String?
+  textoAlterno       String?           @map("texto_alterno")
+  orden              Int               @default(0)
+  tipo               TipoMedio         @default(IMAGEN)
+  transporte         Transporte?       @relation(fields: [transporteId], references: [id], onDelete: Cascade)
+  tour               Tour?             @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  paradaTransporte   ParadaTransporte? @relation(fields: [paradaTransporteId], references: [id], onDelete: Cascade)
+  itinerarioTour     ItinerarioTour?   @relation(fields: [itinerarioTourId], references: [id], onDelete: Cascade)
 
   @@map("imagenes")
 }
