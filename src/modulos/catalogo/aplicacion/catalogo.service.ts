@@ -95,7 +95,12 @@ export class CatalogoService {
     const traduccion =
       transporte.traducciones.find((item) => item.idioma === idioma) ??
       transporte.traducciones.find((item) => item.idioma === 'es');
-    return { ...transporte, traducciones: traduccion ? [traduccion] : [] };
+    const paradas = transporte.paradas.map((parada) => ({
+      ...parada,
+      nombre: this.elegirIdioma(parada.nombreI18n, idioma, parada.nombre),
+      descripcion: this.elegirIdioma(parada.descripcionI18n, idioma, parada.descripcion),
+    }));
+    return { ...transporte, paradas, traducciones: traduccion ? [traduccion] : [] };
   }
 
   async listarTours(paginacion: PaginacionDto, destino?: string) {
@@ -136,7 +141,12 @@ export class CatalogoService {
     const traduccion =
       tour.traducciones.find((item) => item.idioma === idioma) ??
       tour.traducciones.find((item) => item.idioma === 'es');
-    return { ...tour, traducciones: traduccion ? [traduccion] : [] };
+    const itinerarios = tour.itinerarios.map((item) => ({
+      ...item,
+      titulo: this.elegirIdioma(item.tituloI18n, idioma, item.titulo),
+      descripcion: this.elegirIdioma(item.descripcionI18n, idioma, item.descripcion),
+    }));
+    return { ...tour, itinerarios, traducciones: traduccion ? [traduccion] : [] };
   }
 
   buscarSalidasTransporte(
@@ -205,7 +215,7 @@ export class CatalogoService {
     });
   }
 
-  private crearTransporteBase(
+  private async crearTransporteBase(
     base: {
       slug: string;
       origenNombre: string;
@@ -219,6 +229,12 @@ export class CatalogoService {
     paradas?: ParadaEntrada[],
     medios?: MedioEntrada[],
   ) {
+    const nombresI18n = await this.construirI18n(
+      paradas?.map((parada) => parada.nombre) ?? [],
+    );
+    const descripcionesI18n = await this.construirI18n(
+      paradas?.map((parada) => parada.descripcion ?? '') ?? [],
+    );
     return this.prisma.transporte.create({
       data: {
         ...base,
@@ -231,11 +247,13 @@ export class CatalogoService {
               create: paradas.map((parada, indice) => ({
                 orden: indice + 1,
                 nombre: parada.nombre,
+                nombreI18n: nombresI18n[indice],
                 latitud: new Prisma.Decimal(parada.latitud),
                 longitud: new Prisma.Decimal(parada.longitud),
                 minutos: parada.minutos,
                 duracionParadaMinutos: parada.duracionParadaMinutos ?? 0,
                 descripcion: parada.descripcion,
+                descripcionI18n: parada.descripcion ? descripcionesI18n[indice] : undefined,
                 imagenes: parada.medios?.length
                   ? { create: parada.medios.map((medio, orden) => ({ ...medio, tipo: medio.tipo ?? TipoMedio.IMAGEN, orden })) }
                   : undefined,
@@ -335,25 +353,36 @@ export class CatalogoService {
       select: { clave: true, tipo: true },
     });
 
+    const titulosI18n = await this.construirI18n(
+      items.map((item) => item.titulo),
+    );
+    const descripcionesI18n = await this.construirI18n(
+      items.map((item) => item.descripcion),
+    );
+
     await this.prisma.$transaction([
       this.prisma.itinerarioTour.deleteMany({ where: { tourId } }),
-      this.prisma.itinerarioTour.createMany({
-        data: items.map((item, indice) => ({
-          tourId,
-          orden: indice + 1,
-          titulo: item.titulo,
-          descripcion: item.descripcion,
-          latitud:
-            item.latitud !== undefined ? new Prisma.Decimal(item.latitud) : null,
-          longitud:
-            item.longitud !== undefined
-              ? new Prisma.Decimal(item.longitud)
-              : null,
-          imagenes: item.medios?.length
-            ? { create: item.medios.map((medio, orden) => ({ ...medio, tipo: medio.tipo ?? TipoMedio.IMAGEN, orden })) }
-            : undefined,
-        })),
-      }),
+      ...items.map((item, indice) =>
+        this.prisma.itinerarioTour.create({
+          data: {
+            tourId,
+            orden: indice + 1,
+            titulo: item.titulo,
+            tituloI18n: titulosI18n[indice],
+            descripcion: item.descripcion,
+            descripcionI18n: descripcionesI18n[indice],
+            latitud:
+              item.latitud !== undefined ? new Prisma.Decimal(item.latitud) : null,
+            longitud:
+              item.longitud !== undefined
+                ? new Prisma.Decimal(item.longitud)
+                : null,
+            imagenes: item.medios?.length
+              ? { create: item.medios.map((medio, orden) => ({ ...medio, tipo: medio.tipo ?? TipoMedio.IMAGEN, orden })) }
+              : undefined,
+          },
+        }),
+      ),
     ]);
     const clavesConservadas = new Set(
       items.flatMap((item) => item.medios?.map((medio) => medio.clave) ?? []),
@@ -517,6 +546,47 @@ export class CatalogoService {
     };
   }
 
+  /**
+   * Traduce cada texto a todos los idiomas soportados y devuelve, por posición,
+   * un mapa { idioma: traduccion } (incluye 'es' con el original). Si un idioma
+   * falla, se omite y `elegirIdioma` caerá al valor en español.
+   */
+  private async construirI18n(
+    textos: string[],
+  ): Promise<(Record<string, string> | undefined)[]> {
+    if (!textos.length) return [];
+    const mapas: Record<string, string>[] = textos.map((texto) => ({ es: texto }));
+    await Promise.all(
+      IDIOMAS_CATALOGO.filter((idioma) => idioma !== 'es').map(async (idioma) => {
+        try {
+          const traducidos = await this.traducirTextos(textos, idioma);
+          textos.forEach((_, indice) => {
+            if (traducidos[indice]) mapas[indice][idioma] = traducidos[indice];
+          });
+        } catch (error) {
+          this.logger.error(
+            `No se pudieron traducir paradas/itinerarios al idioma ${idioma}`,
+            error,
+          );
+        }
+      }),
+    );
+    return mapas;
+  }
+
+  /** Devuelve el texto del idioma pedido desde un mapa JSON, con respaldo en español. */
+  private elegirIdioma(
+    mapa: Prisma.JsonValue | null | undefined,
+    idioma: string,
+    respaldo: string | null,
+  ): string | null {
+    if (mapa && typeof mapa === 'object' && !Array.isArray(mapa)) {
+      const valor = (mapa as Record<string, unknown>)[idioma];
+      if (typeof valor === 'string' && valor) return valor;
+    }
+    return respaldo;
+  }
+
   private async traducirTextos(textos: string[], idioma: string): Promise<string[]> {
     const apiKey = this.configuracion.get<string>('GOOGLE_TRANSLATE_API_KEY');
     if (apiKey) {
@@ -660,23 +730,34 @@ export class CatalogoService {
       select: { clave: true, tipo: true },
     });
 
+    const nombresI18n = await this.construirI18n(
+      paradas.map((parada) => parada.nombre),
+    );
+    const descripcionesI18n = await this.construirI18n(
+      paradas.map((parada) => parada.descripcion ?? ''),
+    );
+
     await this.prisma.$transaction([
       this.prisma.paradaTransporte.deleteMany({ where: { transporteId } }),
-      this.prisma.paradaTransporte.createMany({
-        data: paradas.map((parada, indice) => ({
-          transporteId,
-          orden: indice + 1,
-          nombre: parada.nombre,
-          latitud: new Prisma.Decimal(parada.latitud),
-          longitud: new Prisma.Decimal(parada.longitud),
-          minutos: parada.minutos,
-          duracionParadaMinutos: parada.duracionParadaMinutos ?? 0,
-          descripcion: parada.descripcion,
-          imagenes: parada.medios?.length
-            ? { create: parada.medios.map((medio, orden) => ({ ...medio, tipo: medio.tipo ?? TipoMedio.IMAGEN, orden })) }
-            : undefined,
-        })),
-      }),
+      ...paradas.map((parada, indice) =>
+        this.prisma.paradaTransporte.create({
+          data: {
+            transporteId,
+            orden: indice + 1,
+            nombre: parada.nombre,
+            nombreI18n: nombresI18n[indice],
+            latitud: new Prisma.Decimal(parada.latitud),
+            longitud: new Prisma.Decimal(parada.longitud),
+            minutos: parada.minutos,
+            duracionParadaMinutos: parada.duracionParadaMinutos ?? 0,
+            descripcion: parada.descripcion,
+            descripcionI18n: parada.descripcion ? descripcionesI18n[indice] : undefined,
+            imagenes: parada.medios?.length
+              ? { create: parada.medios.map((medio, orden) => ({ ...medio, tipo: medio.tipo ?? TipoMedio.IMAGEN, orden })) }
+              : undefined,
+          },
+        }),
+      ),
     ]);
     const clavesConservadas = new Set(
       paradas.flatMap((parada) => parada.medios?.map((medio) => medio.clave) ?? []),
