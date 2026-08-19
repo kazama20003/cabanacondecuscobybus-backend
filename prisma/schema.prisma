@@ -130,6 +130,8 @@ model ParadaTransporte {
   minutos               Int        @map("minutos")
   duracionParadaMinutos Int        @default(0) @map("duracion_parada_minutos")
   descripcion           String?
+  nombreI18n            Json?      @map("nombre_i18n")
+  descripcionI18n       Json?      @map("descripcion_i18n")
   transporte            Transporte @relation(fields: [transporteId], references: [id], onDelete: Cascade)
   imagenes              Imagen[]
 
@@ -162,6 +164,8 @@ model ItinerarioTour {
   orden       Int
   titulo      String
   descripcion String
+  tituloI18n      Json?    @map("titulo_i18n")
+  descripcionI18n Json?    @map("descripcion_i18n")
   latitud     Decimal? @db.Decimal(10, 7)
   longitud    Decimal? @db.Decimal(10, 7)
   tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
