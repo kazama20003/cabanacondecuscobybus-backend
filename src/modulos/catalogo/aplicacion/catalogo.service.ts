@@ -475,6 +475,7 @@ export class CatalogoService {
       estado?: EstadoSalida;
       vehiculoId?: string | null;
       capacidad?: number;
+      minimoPasajeros?: number;
       precioPen?: number;
       precioUsd?: number;
       fechaHoraSalida?: Date;
@@ -483,6 +484,7 @@ export class CatalogoService {
     const data = {
       estado: cambios.estado,
       capacidad: cambios.capacidad,
+      minimoPasajeros: cambios.minimoPasajeros,
       precioPen:
         cambios.precioPen !== undefined
           ? new Prisma.Decimal(cambios.precioPen)
