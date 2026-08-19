@@ -162,6 +162,7 @@ class ActualizarSalidaDto {
     | 'CANCELADA';
   @IsOptional() @IsString() vehiculoId?: string;
   @IsOptional() @IsInt() @Min(1) capacidad?: number;
+  @IsOptional() @IsInt() @Min(1) minimoPasajeros?: number;
   @IsOptional() @IsNumber() @Min(0) precioPen?: number;
   @IsOptional() @IsNumber() @Min(0) precioUsd?: number;
   @IsOptional() @IsDateString() fechaHoraSalida?: string;
