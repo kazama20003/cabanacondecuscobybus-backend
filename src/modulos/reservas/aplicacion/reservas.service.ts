@@ -48,14 +48,6 @@ export class ReservasService {
     if (!datos.pasajeros.length)
       throw new BadRequestException('Debe registrar al menos un pasajero');
 
-    // Valida el cupón ANTES de abrir la transacción (consulta externa liviana)
-    const promocion = datos.codigoPromocion
-      ? await this.promociones.validarCupon(
-          datos.codigoPromocion,
-          datos.tipoServicio === 'TRANSPORTE' ? 'TRANSPORTES' : 'TOURS',
-        )
-      : null;
-
     const reserva = await this.prisma.$transaction(
       async (tx) => {
         const salida =
@@ -71,6 +63,14 @@ export class ReservasService {
         ];
         if (!salida || !estadosDisponibles.includes(salida.estado))
           throw new NotFoundException('Salida no disponible');
+        // Valida el cupón contra la categoría y la entidad concreta de la salida.
+        const promocion = datos.codigoPromocion
+          ? await this.promociones.validarCupon(
+              datos.codigoPromocion,
+              datos.tipoServicio === 'TRANSPORTE' ? 'TRANSPORTES' : 'TOURS',
+              'transporteId' in salida ? salida.transporteId : salida.tourId,
+            )
+          : null;
         const ocupacion = await tx.reserva.aggregate({
           where: {
             ...(datos.tipoServicio === 'TRANSPORTE'

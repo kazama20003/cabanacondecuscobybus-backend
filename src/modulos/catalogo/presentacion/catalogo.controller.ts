@@ -48,12 +48,16 @@ class ContenidoDto {
   @IsString() resumen: string;
   @IsString() descripcion: string;
   @IsOptional() @IsString() queLlevar?: string;
+  @IsOptional() @IsString() incluye?: string;
+  @IsOptional() @IsString() noIncluye?: string;
 }
 class EditarTraduccionDto {
   @IsOptional() @IsString() titulo?: string;
   @IsOptional() @IsString() resumen?: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsString() queLlevar?: string;
+  @IsOptional() @IsString() incluye?: string;
+  @IsOptional() @IsString() noIncluye?: string;
   @IsOptional() @IsIn(['BORRADOR', 'PUBLICADA']) estado?: 'BORRADOR' | 'PUBLICADA';
 }
 class MedioDto {
@@ -105,6 +109,41 @@ class CrearTourDto {
   @aplicar(EsLatitud()) destinoLatitud: number;
   @aplicar(EsLongitud()) destinoLongitud: number;
   @IsInt() @Min(1) duracionMinutos: number;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MedioDto)
+  medios?: MedioDto[];
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ContenidoDto)
+  contenido?: ContenidoDto;
+}
+class ActualizarTransporteDto {
+  @IsOptional() @IsString() slug?: string;
+  @IsOptional() @IsString() origenNombre?: string;
+  @IsOptional() @aplicar(EsLatitud()) origenLatitud?: number;
+  @IsOptional() @aplicar(EsLongitud()) origenLongitud?: number;
+  @IsOptional() @IsString() destinoNombre?: string;
+  @IsOptional() @aplicar(EsLatitud()) destinoLatitud?: number;
+  @IsOptional() @aplicar(EsLongitud()) destinoLongitud?: number;
+  @IsOptional() @IsInt() @Min(1) duracionMinutosEstimada?: number;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MedioDto)
+  medios?: MedioDto[];
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ContenidoDto)
+  contenido?: ContenidoDto;
+}
+class ActualizarTourDto {
+  @IsOptional() @IsString() slug?: string;
+  @IsOptional() @IsString() destinoNombre?: string;
+  @IsOptional() @aplicar(EsLatitud()) destinoLatitud?: number;
+  @IsOptional() @aplicar(EsLongitud()) destinoLongitud?: number;
+  @IsOptional() @IsInt() @Min(1) duracionMinutos?: number;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -223,6 +262,19 @@ export class CatalogoController {
     @Body() datos: CrearTourDto,
   ) {
     return this.servicio.crearTour(datos);
+  }
+  @Patch('administracion/transportes/:id')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  actualizarTransporte(
+    @Param('id') id: string,
+    @Body() datos: ActualizarTransporteDto,
+  ) {
+    return this.servicio.actualizarTransporte(id, datos);
+  }
+  @Patch('administracion/tours/:id')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  actualizarTour(@Param('id') id: string, @Body() datos: ActualizarTourDto) {
+    return this.servicio.actualizarTour(id, datos);
   }
   @Delete('administracion/transportes/:id')
   @Roles('ADMINISTRADOR', 'OPERADOR')

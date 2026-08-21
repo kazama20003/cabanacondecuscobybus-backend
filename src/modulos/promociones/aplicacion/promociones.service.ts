@@ -21,6 +21,8 @@ export interface DatosPromocion {
   descripcion?: string;
   tipo: TipoPromocion;
   objetivo?: ObjetivoPromocion;
+  transporteId?: string | null;
+  tourId?: string | null;
   codigo?: string;
   porcentajeDescuento?: number;
   montoDescuento?: number;
@@ -139,6 +141,7 @@ export class PromocionesService {
   async validarCupon(
     codigo: string,
     objetivo: 'TRANSPORTES' | 'TOURS',
+    entidadId?: string | null,
   ): Promise<Promocion> {
     const promocion = await this.prisma.promocion.findUnique({
       where: { codigo: codigo.trim().toUpperCase() },
@@ -160,6 +163,20 @@ export class PromocionesService {
       throw new BadRequestException(
         `El cupón solo aplica a ${promocion.objetivo.toLowerCase()}`,
       );
+    // Segmentación específica: si la promoción apunta a un transporte/tour
+    // concreto, la reserva debe ser de esa misma entidad.
+    if (objetivo === 'TRANSPORTES' && promocion.transporteId) {
+      if (promocion.transporteId !== entidadId)
+        throw new BadRequestException(
+          'El cupón solo aplica a una ruta de transporte específica',
+        );
+    }
+    if (objetivo === 'TOURS' && promocion.tourId) {
+      if (promocion.tourId !== entidadId)
+        throw new BadRequestException(
+          'El cupón solo aplica a un tour específico',
+        );
+    }
     return promocion;
   }
 
