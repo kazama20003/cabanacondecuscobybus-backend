@@ -36,6 +36,8 @@ interface ContenidoEntrada {
   resumen: string;
   descripcion: string;
   queLlevar?: string;
+  incluye?: string;
+  noIncluye?: string;
 }
 
 const IDIOMAS_CATALOGO = ['es', 'en', 'fr', 'it', 'pt', 'zh', 'ja', 'ru', 'de'];
@@ -70,6 +72,7 @@ export class CatalogoService {
         where,
         include: {
           traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
+          imagenes: { orderBy: { orden: 'asc' } },
           paradas: { include: { imagenes: { orderBy: { orden: 'asc' } } }, orderBy: { orden: 'asc' } },
           salidas: { orderBy: { fechaHoraSalida: 'asc' } },
         },
@@ -335,6 +338,155 @@ export class CatalogoService {
     });
   }
 
+  async actualizarTransporte(
+    id: string,
+    datos: {
+      slug?: string;
+      origenNombre?: string;
+      origenLatitud?: number;
+      origenLongitud?: number;
+      destinoNombre?: string;
+      destinoLatitud?: number;
+      destinoLongitud?: number;
+      duracionMinutosEstimada?: number;
+      medios?: MedioEntrada[];
+      contenido?: ContenidoEntrada;
+    },
+  ) {
+    const existente = await this.prisma.transporte.findUnique({ where: { id } });
+    if (!existente) throw new NotFoundException('Transporte no encontrado');
+    const { medios, contenido, ...base } = datos;
+
+    await this.prisma.transporte.update({
+      where: { id },
+      data: {
+        ...(base.slug !== undefined && { slug: base.slug }),
+        ...(base.origenNombre !== undefined && { origenNombre: base.origenNombre }),
+        ...(base.origenLatitud !== undefined && {
+          origenLatitud: new Prisma.Decimal(base.origenLatitud),
+        }),
+        ...(base.origenLongitud !== undefined && {
+          origenLongitud: new Prisma.Decimal(base.origenLongitud),
+        }),
+        ...(base.destinoNombre !== undefined && { destinoNombre: base.destinoNombre }),
+        ...(base.destinoLatitud !== undefined && {
+          destinoLatitud: new Prisma.Decimal(base.destinoLatitud),
+        }),
+        ...(base.destinoLongitud !== undefined && {
+          destinoLongitud: new Prisma.Decimal(base.destinoLongitud),
+        }),
+        ...(base.duracionMinutosEstimada !== undefined && {
+          duracionMinutosEstimada: base.duracionMinutosEstimada,
+        }),
+      },
+    });
+
+    if (medios !== undefined) {
+      await this.reemplazarMedios('transporte', id, medios, 'transportes');
+    }
+    if (contenido) {
+      await this.generarTraducciones('transporte', id, contenido);
+    }
+    return this.prisma.transporte.findUnique({
+      where: { id },
+      include: {
+        paradas: { include: { imagenes: { orderBy: { orden: 'asc' } } }, orderBy: { orden: 'asc' } },
+        imagenes: { orderBy: { orden: 'asc' } },
+        traducciones: true,
+      },
+    });
+  }
+
+  async actualizarTour(
+    id: string,
+    datos: {
+      slug?: string;
+      destinoNombre?: string;
+      destinoLatitud?: number;
+      destinoLongitud?: number;
+      duracionMinutos?: number;
+      requiereGuia?: boolean;
+      medios?: MedioEntrada[];
+      contenido?: ContenidoEntrada;
+    },
+  ) {
+    const existente = await this.prisma.tour.findUnique({ where: { id } });
+    if (!existente) throw new NotFoundException('Tour no encontrado');
+    const { medios, contenido, ...base } = datos;
+
+    await this.prisma.tour.update({
+      where: { id },
+      data: {
+        ...(base.slug !== undefined && { slug: base.slug }),
+        ...(base.destinoNombre !== undefined && { destinoNombre: base.destinoNombre }),
+        ...(base.destinoLatitud !== undefined && {
+          destinoLatitud: new Prisma.Decimal(base.destinoLatitud),
+        }),
+        ...(base.destinoLongitud !== undefined && {
+          destinoLongitud: new Prisma.Decimal(base.destinoLongitud),
+        }),
+        ...(base.duracionMinutos !== undefined && { duracionMinutos: base.duracionMinutos }),
+        ...(base.requiereGuia !== undefined && { requiereGuia: base.requiereGuia }),
+      },
+    });
+
+    if (medios !== undefined) {
+      await this.reemplazarMedios('tour', id, medios, 'tours');
+    }
+    if (contenido) {
+      await this.generarTraducciones('tour', id, contenido);
+    }
+    return this.prisma.tour.findUnique({
+      where: { id },
+      include: {
+        imagenes: { orderBy: { orden: 'asc' } },
+        traducciones: true,
+      },
+    });
+  }
+
+  /**
+   * Reemplaza los medios de nivel principal (no toca los de paradas/itinerario).
+   * Borra los anteriores en Cloudinary salvo los que se conservan por clave.
+   */
+  private async reemplazarMedios(
+    tipo: 'transporte' | 'tour',
+    id: string,
+    medios: MedioEntrada[],
+    categoria: 'transportes' | 'tours',
+  ) {
+    const where = tipo === 'transporte' ? { transporteId: id } : { tourId: id };
+    const anteriores = await this.prisma.imagen.findMany({
+      where,
+      select: { clave: true, tipo: true },
+    });
+    await this.prisma.$transaction([
+      this.prisma.imagen.deleteMany({ where }),
+      ...medios.map((medio, orden) =>
+        this.prisma.imagen.create({
+          data: {
+            ...(tipo === 'transporte' ? { transporteId: id } : { tourId: id }),
+            url: medio.url,
+            clave: medio.clave,
+            textoAlterno: medio.textoAlterno,
+            tipo: medio.tipo ?? TipoMedio.IMAGEN,
+            orden,
+          },
+        }),
+      ),
+    ]);
+    const conservadas = new Set(
+      medios.map((medio) => medio.clave).filter((clave): clave is string => !!clave),
+    );
+    await Promise.all(
+      anteriores
+        .filter((imagen) => imagen.clave && !conservadas.has(imagen.clave))
+        .map((imagen) =>
+          this.uploads.eliminarSilenciosamente(imagen.clave, imagen.tipo, categoria),
+        ),
+    );
+  }
+
   /** Define el itinerario completo del tour (reemplaza el set, orden = posición). */
   async definirItinerario(
     tourId: string,
@@ -538,6 +690,8 @@ export class CatalogoService {
       contenido.resumen,
       contenido.descripcion,
       contenido.queLlevar ?? '',
+      contenido.incluye ?? '',
+      contenido.noIncluye ?? '',
     ];
     const traducciones = await this.traducirTextos(textos, idioma);
     return {
@@ -545,6 +699,8 @@ export class CatalogoService {
       resumen: traducciones[1],
       descripcion: traducciones[2],
       queLlevar: traducciones[3] || undefined,
+      incluye: traducciones[4] || undefined,
+      noIncluye: traducciones[5] || undefined,
     };
   }
 
@@ -695,6 +851,8 @@ export class CatalogoService {
       titulo: contenido.titulo ?? '',
       resumen: contenido.resumen ?? '',
       descripcion: contenido.descripcion ?? '',
+      incluye: contenido.incluye ?? null,
+      noIncluye: contenido.noIncluye ?? null,
       estado: estado as EstadoTraduccion,
     };
     if (tipo === 'transporte') {

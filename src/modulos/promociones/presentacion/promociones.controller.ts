@@ -17,8 +17,10 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { ObjetivoPromocion, TipoPromocion } from '@prisma/client';
 import { PaginacionDto } from '../../../compartido/paginacion';
@@ -30,6 +32,8 @@ class CrearPromocionDto {
   @IsOptional() @IsString() descripcion?: string;
   @IsEnum(TipoPromocion) tipo: TipoPromocion;
   @IsOptional() @IsEnum(ObjetivoPromocion) objetivo?: ObjetivoPromocion;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() transporteId?: string | null;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() tourId?: string | null;
   @IsOptional() @IsString() codigo?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100)
   porcentajeDescuento?: number;
@@ -48,6 +52,8 @@ class ActualizarPromocionDto {
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsEnum(TipoPromocion) tipo?: TipoPromocion;
   @IsOptional() @IsEnum(ObjetivoPromocion) objetivo?: ObjetivoPromocion;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() transporteId?: string | null;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() tourId?: string | null;
   @IsOptional() @IsString() codigo?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100)
   porcentajeDescuento?: number;
