@@ -116,6 +116,7 @@ model Transporte {
   salidas                 SalidaTransporte[]
   traducciones            TraduccionTransporte[]
   imagenes                Imagen[]
+  promociones             Promocion[]
 
   @@map("transportes")
 }
@@ -154,6 +155,7 @@ model Tour {
   salidas         SalidaTour[]
   traducciones    TraduccionTour[]
   imagenes        Imagen[]
+  promociones     Promocion[]
 
   @@map("tours")
 }
@@ -305,6 +307,10 @@ model Promocion {
   descripcion         String?
   tipo                TipoPromocion
   objetivo            ObjetivoPromocion @default(TODOS)
+  /// Transporte específico al que aplica (null = toda la categoría según objetivo)
+  transporteId        String?           @map("transporte_id") @db.Uuid
+  /// Tour específico al que aplica (null = toda la categoría según objetivo)
+  tourId              String?           @map("tour_id") @db.Uuid
   /// Cupón opcional; si existe, el cliente debe ingresarlo al reservar
   codigo              String?           @unique
   /// Descuento porcentual (1-100); excluyente con montoDescuento
@@ -322,6 +328,8 @@ model Promocion {
   creadoEn            DateTime          @default(now()) @map("creado_en")
   actualizadoEn       DateTime          @updatedAt @map("actualizado_en")
   reservas            Reserva[]
+  transporte          Transporte?       @relation(fields: [transporteId], references: [id], onDelete: SetNull)
+  tour                Tour?             @relation(fields: [tourId], references: [id], onDelete: SetNull)
 
   @@index([activo, fechaInicio, fechaFin])
   @@map("promociones")
@@ -345,6 +353,8 @@ model TraduccionTransporte {
   titulo       String
   resumen      String
   descripcion  String
+  incluye      String?
+  noIncluye    String?          @map("no_incluye")
   estado       EstadoTraduccion @default(BORRADOR)
   transporte   Transporte       @relation(fields: [transporteId], references: [id], onDelete: Cascade)
 
@@ -360,6 +370,8 @@ model TraduccionTour {
   resumen     String
   descripcion String
   queLlevar   String?          @map("que_llevar")
+  incluye     String?
+  noIncluye   String?          @map("no_incluye")
   estado      EstadoTraduccion @default(BORRADOR)
   tour        Tour             @relation(fields: [tourId], references: [id], onDelete: Cascade)
 
