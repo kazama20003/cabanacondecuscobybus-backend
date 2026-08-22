@@ -785,6 +785,70 @@ export class CatalogoService {
     );
   }
 
+  /**
+   * Regenera nombreI18n/descripcionI18n de paradas e itinerarios cuya traducción
+   * inline esté ausente (data creada antes de la migración i18n). Con `forzar`
+   * vuelve a traducir todas las filas. Devuelve el conteo de filas actualizadas.
+   */
+  async rellenarI18nFaltante(forzar = false): Promise<{
+    paradas: number;
+    itinerarios: number;
+  }> {
+    const paradas = await this.prisma.paradaTransporte.findMany(
+      forzar
+        ? undefined
+        : {
+            where: {
+              OR: [
+                { nombreI18n: { equals: Prisma.DbNull } },
+                { descripcion: { not: null }, descripcionI18n: { equals: Prisma.DbNull } },
+              ],
+            },
+          },
+    );
+    for (const parada of paradas) {
+      const textos = [parada.nombre, parada.descripcion ?? ''];
+      const [nombreI18n, descripcionI18n] = await this.construirI18n(textos);
+      await this.prisma.paradaTransporte.update({
+        where: { id: parada.id },
+        data: {
+          nombreI18n: nombreI18n ?? Prisma.JsonNull,
+          descripcionI18n: parada.descripcion
+            ? (descripcionI18n ?? Prisma.JsonNull)
+            : Prisma.DbNull,
+        },
+      });
+      this.logger.log(`Parada ${parada.id} traducida (${parada.nombre})`);
+    }
+
+    const itinerarios = await this.prisma.itinerarioTour.findMany(
+      forzar
+        ? undefined
+        : {
+            where: {
+              OR: [
+                { tituloI18n: { equals: Prisma.DbNull } },
+                { descripcionI18n: { equals: Prisma.DbNull } },
+              ],
+            },
+          },
+    );
+    for (const itinerario of itinerarios) {
+      const textos = [itinerario.titulo, itinerario.descripcion];
+      const [tituloI18n, descripcionI18n] = await this.construirI18n(textos);
+      await this.prisma.itinerarioTour.update({
+        where: { id: itinerario.id },
+        data: {
+          tituloI18n: tituloI18n ?? Prisma.JsonNull,
+          descripcionI18n: descripcionI18n ?? Prisma.JsonNull,
+        },
+      });
+      this.logger.log(`Itinerario ${itinerario.id} traducido (${itinerario.titulo})`);
+    }
+
+    return { paradas: paradas.length, itinerarios: itinerarios.length };
+  }
+
   async eliminarTransporte(id: string) {
     const transporte = await this.prisma.transporte.findUnique({
       where: { id },
