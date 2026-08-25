@@ -309,6 +309,13 @@ export class CatalogoController {
       entidad: 'TRANSPORTE',
       entidadId: creado?.id,
       descripcion: `Creó la ruta ${datos.origenNombre} → ${datos.destinoNombre}`,
+      detalle: {
+        origen: datos.origenNombre,
+        destino: datos.destinoNombre,
+        duracionMinutosEstimada: datos.duracionMinutosEstimada,
+        paradas: datos.paradas?.length ?? 0,
+        medios: datos.medios?.length ?? 0,
+      },
     });
     return creado;
   }
@@ -325,6 +332,11 @@ export class CatalogoController {
       entidad: 'TOUR',
       entidadId: creado?.id,
       descripcion: `Creó el tour ${datos.destinoNombre}`,
+      detalle: {
+        destino: datos.destinoNombre,
+        duracionMinutos: datos.duracionMinutos,
+        medios: datos.medios?.length ?? 0,
+      },
     });
     return creado;
   }
@@ -342,7 +354,7 @@ export class CatalogoController {
       entidad: 'TRANSPORTE',
       entidadId: id,
       descripcion: `Actualizó la ruta ${actualizado?.origenNombre ?? ''} → ${actualizado?.destinoNombre ?? ''}`,
-      detalle: { camposCambiados: Object.keys(datos) },
+      detalle: { cambios: datos as unknown as Record<string, unknown> },
     });
     return actualizado;
   }
@@ -360,7 +372,7 @@ export class CatalogoController {
       entidad: 'TOUR',
       entidadId: id,
       descripcion: `Actualizó el tour ${actualizado?.destinoNombre ?? ''}`,
-      detalle: { camposCambiados: Object.keys(datos) },
+      detalle: { cambios: datos as unknown as Record<string, unknown> },
     });
     return actualizado;
   }
@@ -463,7 +475,7 @@ export class CatalogoController {
       entidad: 'SALIDA',
       entidadId: id,
       descripcion: `Actualizó una salida de ${tipoSalida === 'tour' ? 'tour' : 'transporte'}`,
-      detalle: { camposCambiados: Object.keys(cambios) },
+      detalle: { cambios: cambios as unknown as Record<string, unknown> },
     });
     return actualizada;
   }
@@ -490,6 +502,7 @@ export class CatalogoController {
       entidad: 'SALIDA',
       entidadId: creada.id,
       descripcion: `Programó una salida de transporte para ${datos.fechaHoraSalida}`,
+      detalle: { cambios: datos as unknown as Record<string, unknown> },
     });
     return creada;
   }
@@ -511,6 +524,7 @@ export class CatalogoController {
       entidad: 'SALIDA',
       entidadId: creada.id,
       descripcion: `Programó una salida de tour para ${datos.fechaHoraSalida}`,
+      detalle: { cambios: datos as unknown as Record<string, unknown> },
     });
     return creada;
   }
@@ -535,7 +549,10 @@ export class CatalogoController {
       entidad: 'PLANTILLA_SALIDA',
       entidadId: creada.id,
       descripcion: `Creó horario recurrente de transporte (días ${datos.diasSemana.join(",")} a las ${datos.horaSalida})`,
-      detalle: { salidasGeneradas: creada.salidasGeneradas },
+      detalle: {
+        salidasGeneradas: creada.salidasGeneradas,
+        cambios: datos as unknown as Record<string, unknown>,
+      },
     });
     return creada;
   }
@@ -553,7 +570,10 @@ export class CatalogoController {
       entidad: 'PLANTILLA_SALIDA',
       entidadId: creada.id,
       descripcion: `Creó horario recurrente de tour (días ${datos.diasSemana.join(",")} a las ${datos.horaSalida})`,
-      detalle: { salidasGeneradas: creada.salidasGeneradas },
+      detalle: {
+        salidasGeneradas: creada.salidasGeneradas,
+        cambios: datos as unknown as Record<string, unknown>,
+      },
     });
     return creada;
   }
@@ -576,7 +596,7 @@ export class CatalogoController {
           : cambios.activo === true
             ? 'Reactivó un horario recurrente'
             : 'Actualizó un horario recurrente',
-      detalle: { camposCambiados: Object.keys(cambios) },
+      detalle: { cambios: cambios as unknown as Record<string, unknown> },
     });
     return actualizada;
   }

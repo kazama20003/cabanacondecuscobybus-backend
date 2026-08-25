@@ -107,6 +107,7 @@ export class PromocionesController {
       entidad: 'PROMOCION',
       entidadId: creada.id,
       descripcion: `Creó la promoción "${datos.titulo}"`,
+      detalle: { cambios: datos as unknown as Record<string, unknown> },
     });
     return creada;
   }
@@ -129,7 +130,7 @@ export class PromocionesController {
       entidad: 'PROMOCION',
       entidadId: id,
       descripcion: `Actualizó la promoción "${actualizada.titulo}"`,
-      detalle: { camposCambiados: Object.keys(datos) },
+      detalle: { cambios: datos as unknown as Record<string, unknown> },
     });
     return actualizada;
   }
