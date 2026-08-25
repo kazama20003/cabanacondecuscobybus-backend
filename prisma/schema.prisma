@@ -95,6 +95,7 @@ model Usuario {
   actualizadoEn    DateTime   @updatedAt @map("actualizado_en")
   reservas         Reserva[]
   pagosConfirmados Pago[]     @relation("pagos_confirmados_por")
+  auditorias       Auditoria[]
 
   @@map("usuarios")
 }
@@ -240,6 +241,24 @@ model SalidaTour {
   @@unique([plantillaId, fechaHoraSalida])
   @@index([tourId, fechaHoraSalida])
   @@map("salidas_tour")
+}
+
+/// Registro de acciones del panel de administración. Retención: 30 días
+/// (limpieza diaria por cron), suficiente para revisar el mes en curso.
+model Auditoria {
+  id          String   @id @default(uuid()) @db.Uuid
+  usuarioId   String?  @map("usuario_id") @db.Uuid
+  accion      String
+  entidad     String
+  entidadId   String?  @map("entidad_id")
+  descripcion String
+  detalle     Json?
+  creadoEn    DateTime @default(now()) @map("creado_en")
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([creadoEn])
+  @@index([entidad, creadoEn])
+  @@map("auditoria")
 }
 
 /// Horario recurrente: genera salidas reales según días de semana y vigencia.

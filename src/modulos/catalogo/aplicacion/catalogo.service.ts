@@ -785,6 +785,12 @@ export class CatalogoService {
     );
   }
 
+  /**
+   * Sin salidas: borrado real (con limpieza de medios). Con salidas: se
+   * desactiva — desaparece de todos los listados pero las reservas y el
+   * historial quedan intactos. También pausa sus plantillas y cancela las
+   * salidas futuras sin reservas.
+   */
   async eliminarTransporte(id: string) {
     const transporte = await this.prisma.transporte.findUnique({
       where: { id },
@@ -792,7 +798,25 @@ export class CatalogoService {
     });
     if (!transporte) throw new NotFoundException('Transporte no encontrado');
     if (transporte._count.salidas) {
-      throw new ConflictException('No se puede eliminar un transporte con salidas registradas');
+      await this.prisma.$transaction([
+        this.prisma.transporte.update({ where: { id }, data: { activo: false } }),
+        this.prisma.plantillaSalida.updateMany({
+          where: { transporteId: id },
+          data: { activo: false },
+        }),
+        this.prisma.salidaTransporte.updateMany({
+          where: {
+            transporteId: id,
+            fechaHoraSalida: { gt: new Date() },
+            reservas: { none: {} },
+          },
+          data: { estado: EstadoSalida.CANCELADA },
+        }),
+      ]);
+      return {
+        mensaje: 'Transporte desactivado (tenía salidas registradas)',
+        desactivado: true,
+      };
     }
     await this.prisma.transporte.delete({ where: { id } });
     await Promise.all(
@@ -800,7 +824,7 @@ export class CatalogoService {
         this.uploads.eliminarSilenciosamente(imagen.clave, imagen.tipo, 'transportes'),
       ),
     );
-    return { mensaje: 'Transporte eliminado' };
+    return { mensaje: 'Transporte eliminado', desactivado: false };
   }
 
   async eliminarTour(id: string) {
@@ -810,7 +834,25 @@ export class CatalogoService {
     });
     if (!tour) throw new NotFoundException('Tour no encontrado');
     if (tour._count.salidas) {
-      throw new ConflictException('No se puede eliminar un tour con salidas registradas');
+      await this.prisma.$transaction([
+        this.prisma.tour.update({ where: { id }, data: { activo: false } }),
+        this.prisma.plantillaSalida.updateMany({
+          where: { tourId: id },
+          data: { activo: false },
+        }),
+        this.prisma.salidaTour.updateMany({
+          where: {
+            tourId: id,
+            fechaHoraSalida: { gt: new Date() },
+            reservas: { none: {} },
+          },
+          data: { estado: EstadoSalida.CANCELADA },
+        }),
+      ]);
+      return {
+        mensaje: 'Tour desactivado (tenía salidas registradas)',
+        desactivado: true,
+      };
     }
     await this.prisma.tour.delete({ where: { id } });
     await Promise.all(
@@ -818,7 +860,7 @@ export class CatalogoService {
         this.uploads.eliminarSilenciosamente(imagen.clave, imagen.tipo, 'tours'),
       ),
     );
-    return { mensaje: 'Tour eliminado' };
+    return { mensaje: 'Tour eliminado', desactivado: false };
   }
 
   listarTraducciones(tipo: 'transporte' | 'tour', id: string) {

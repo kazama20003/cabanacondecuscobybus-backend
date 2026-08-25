@@ -7,6 +7,7 @@ import { PagosModule } from './modulos/pagos/pagos.module';
 import { PromocionesModule } from './modulos/promociones/promociones.module';
 import { ReservasModule } from './modulos/reservas/reservas.module';
 import { UsuariosModule } from './modulos/usuarios/usuarios.module';
+import { AuditoriaModule } from './compartido/auditoria/auditoria.module';
 import { LimpiezaModule } from './compartido/limpieza/limpieza.module';
 import { PrismaModule } from './compartido/prisma/prisma.module';
 
@@ -14,6 +15,7 @@ import { PrismaModule } from './compartido/prisma/prisma.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    AuditoriaModule,
     LimpiezaModule,
     AutenticacionModule,
     UploadsModule,

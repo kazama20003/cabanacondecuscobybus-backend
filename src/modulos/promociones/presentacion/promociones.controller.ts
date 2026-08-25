@@ -23,9 +23,13 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ObjetivoPromocion, TipoPromocion } from '@prisma/client';
+import { AuditoriaService } from '../../../compartido/auditoria/auditoria.service';
 import { PaginacionDto } from '../../../compartido/paginacion';
 import { Roles } from '../../autenticacion/presentacion/roles';
+import { UsuarioActual } from '../../autenticacion/presentacion/usuario-actual';
 import { PromocionesService } from '../aplicacion/promociones.service';
+
+type Usuario = { id: string; rol: string };
 
 class CrearPromocionDto {
   @IsString() titulo: string;
@@ -69,7 +73,10 @@ class ActualizarPromocionDto {
 
 @Controller()
 export class PromocionesController {
-  constructor(private readonly servicio: PromocionesService) {}
+  constructor(
+    private readonly servicio: PromocionesService,
+    private readonly auditoria: AuditoriaService,
+  ) {}
 
   /** Público: promociones vigentes (banners del sitio). */
   @Get('promociones')
@@ -85,27 +92,59 @@ export class PromocionesController {
 
   @Post('administracion/promociones')
   @Roles('ADMINISTRADOR')
-  crear(@Body() datos: CrearPromocionDto) {
-    return this.servicio.crear({
+  async crear(
+    @Body() datos: CrearPromocionDto,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const creada = await this.servicio.crear({
       ...datos,
       fechaInicio: new Date(datos.fechaInicio),
       fechaFin: new Date(datos.fechaFin),
     });
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'CREAR',
+      entidad: 'PROMOCION',
+      entidadId: creada.id,
+      descripcion: `Creó la promoción "${datos.titulo}"`,
+    });
+    return creada;
   }
 
   @Patch('administracion/promociones/:id')
   @Roles('ADMINISTRADOR')
-  actualizar(@Param('id') id: string, @Body() datos: ActualizarPromocionDto) {
-    return this.servicio.actualizar(id, {
+  async actualizar(
+    @Param('id') id: string,
+    @Body() datos: ActualizarPromocionDto,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const actualizada = await this.servicio.actualizar(id, {
       ...datos,
       fechaInicio: datos.fechaInicio ? new Date(datos.fechaInicio) : undefined,
       fechaFin: datos.fechaFin ? new Date(datos.fechaFin) : undefined,
     });
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'ACTUALIZAR',
+      entidad: 'PROMOCION',
+      entidadId: id,
+      descripcion: `Actualizó la promoción "${actualizada.titulo}"`,
+      detalle: { camposCambiados: Object.keys(datos) },
+    });
+    return actualizada;
   }
 
   @Delete('administracion/promociones/:id')
   @Roles('ADMINISTRADOR')
-  eliminar(@Param('id') id: string) {
-    return this.servicio.eliminar(id);
+  async eliminar(@Param('id') id: string, @UsuarioActual() usuario: Usuario) {
+    const resultado = await this.servicio.eliminar(id);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'ELIMINAR',
+      entidad: 'PROMOCION',
+      entidadId: id,
+      descripcion: 'Eliminó una promoción',
+    });
+    return resultado;
   }
 }
