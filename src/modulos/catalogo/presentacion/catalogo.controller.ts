@@ -30,10 +30,14 @@ function aplicar(decoradores: PropertyDecorator[]): PropertyDecorator {
   return (target, key) => decoradores.forEach((d) => d(target, key));
 }
 import { IsBoolean } from 'class-validator';
+import { AuditoriaService } from '../../../compartido/auditoria/auditoria.service';
 import { PaginacionDto } from '../../../compartido/paginacion';
 import { Roles } from '../../autenticacion/presentacion/roles';
+import { UsuarioActual } from '../../autenticacion/presentacion/usuario-actual';
 import { CatalogoService } from '../aplicacion/catalogo.service';
 import { PlantillasSalidaService } from '../aplicacion/plantillas-salida.service';
+
+type Usuario = { id: string; rol: string };
 
 const IDIOMAS_CATALOGO = ['es', 'en', 'fr', 'it', 'pt', 'zh', 'ja', 'ru', 'de'];
 
@@ -254,6 +258,7 @@ export class CatalogoController {
   constructor(
     private readonly servicio: CatalogoService,
     private readonly plantillas: PlantillasSalidaService,
+    private readonly auditoria: AuditoriaService,
   ) {}
   @Get('transportes') transportes(@Query() filtros: FiltrosTransportesDto) {
     return this.servicio.listarTransportes(
@@ -293,36 +298,103 @@ export class CatalogoController {
 
   @Post('administracion/transportes')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  crearTransporte(@Body() datos: CrearTransporteDto) {
-    return this.servicio.crearTransporte(datos);
-  }
-  @Post('administracion/tours') @Roles('ADMINISTRADOR', 'OPERADOR') crearTour(
-    @Body() datos: CrearTourDto,
+  async crearTransporte(
+    @Body() datos: CrearTransporteDto,
+    @UsuarioActual() usuario: Usuario,
   ) {
-    return this.servicio.crearTour(datos);
+    const creado = await this.servicio.crearTransporte(datos);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'CREAR',
+      entidad: 'TRANSPORTE',
+      entidadId: creado?.id,
+      descripcion: `Creó la ruta ${datos.origenNombre} → ${datos.destinoNombre}`,
+    });
+    return creado;
+  }
+  @Post('administracion/tours')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  async crearTour(
+    @Body() datos: CrearTourDto,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const creado = await this.servicio.crearTour(datos);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'CREAR',
+      entidad: 'TOUR',
+      entidadId: creado?.id,
+      descripcion: `Creó el tour ${datos.destinoNombre}`,
+    });
+    return creado;
   }
   @Patch('administracion/transportes/:id')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  actualizarTransporte(
+  async actualizarTransporte(
     @Param('id') id: string,
     @Body() datos: ActualizarTransporteDto,
+    @UsuarioActual() usuario: Usuario,
   ) {
-    return this.servicio.actualizarTransporte(id, datos);
+    const actualizado = await this.servicio.actualizarTransporte(id, datos);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'ACTUALIZAR',
+      entidad: 'TRANSPORTE',
+      entidadId: id,
+      descripcion: `Actualizó la ruta ${actualizado?.origenNombre ?? ''} → ${actualizado?.destinoNombre ?? ''}`,
+      detalle: { camposCambiados: Object.keys(datos) },
+    });
+    return actualizado;
   }
   @Patch('administracion/tours/:id')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  actualizarTour(@Param('id') id: string, @Body() datos: ActualizarTourDto) {
-    return this.servicio.actualizarTour(id, datos);
+  async actualizarTour(
+    @Param('id') id: string,
+    @Body() datos: ActualizarTourDto,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const actualizado = await this.servicio.actualizarTour(id, datos);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'ACTUALIZAR',
+      entidad: 'TOUR',
+      entidadId: id,
+      descripcion: `Actualizó el tour ${actualizado?.destinoNombre ?? ''}`,
+      detalle: { camposCambiados: Object.keys(datos) },
+    });
+    return actualizado;
   }
   @Delete('administracion/transportes/:id')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  eliminarTransporte(@Param('id') id: string) {
-    return this.servicio.eliminarTransporte(id);
+  async eliminarTransporte(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const resultado = await this.servicio.eliminarTransporte(id);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: resultado.desactivado ? 'DESACTIVAR' : 'ELIMINAR',
+      entidad: 'TRANSPORTE',
+      entidadId: id,
+      descripcion: resultado.mensaje,
+    });
+    return resultado;
   }
   @Delete('administracion/tours/:id')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  eliminarTour(@Param('id') id: string) {
-    return this.servicio.eliminarTour(id);
+  async eliminarTour(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const resultado = await this.servicio.eliminarTour(id);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: resultado.desactivado ? 'DESACTIVAR' : 'ELIMINAR',
+      entidad: 'TOUR',
+      entidadId: id,
+      descripcion: resultado.mensaje,
+    });
+    return resultado;
   }
   @Get('administracion/:tipo/:id/traducciones')
   @Roles('ADMINISTRADOR', 'OPERADOR')
@@ -369,12 +441,13 @@ export class CatalogoController {
   }
   @Patch('administracion/salidas/:tipoSalida/:id')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  actualizarSalida(
+  async actualizarSalida(
     @Param('tipoSalida') tipoSalida: string,
     @Param('id') id: string,
     @Body() cambios: ActualizarSalidaDto,
+    @UsuarioActual() usuario: Usuario,
   ) {
-    return this.servicio.actualizarSalida(
+    const actualizada = await this.servicio.actualizarSalida(
       tipoSalida === 'tour' ? 'TOUR' : 'TRANSPORTE',
       id,
       {
@@ -384,6 +457,15 @@ export class CatalogoController {
           : undefined,
       },
     );
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'ACTUALIZAR',
+      entidad: 'SALIDA',
+      entidadId: id,
+      descripcion: `Actualizó una salida de ${tipoSalida === 'tour' ? 'tour' : 'transporte'}`,
+      detalle: { camposCambiados: Object.keys(cambios) },
+    });
+    return actualizada;
   }
   @Post('administracion/transportes/:id/paradas')
   @Roles('ADMINISTRADOR', 'OPERADOR')
@@ -392,24 +474,45 @@ export class CatalogoController {
   }
   @Post('administracion/transportes/:id/salidas')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  crearSalidaTransporte(
+  async crearSalidaTransporte(
     @Param('id') transporteId: string,
     @Body() datos: CrearSalidaDto,
+    @UsuarioActual() usuario: Usuario,
   ) {
-    return this.servicio.crearSalidaTransporte({
+    const creada = await this.servicio.crearSalidaTransporte({
       ...datos,
       transporteId,
       fechaHoraSalida: new Date(datos.fechaHoraSalida),
     });
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'CREAR',
+      entidad: 'SALIDA',
+      entidadId: creada.id,
+      descripcion: `Programó una salida de transporte para ${datos.fechaHoraSalida}`,
+    });
+    return creada;
   }
   @Post('administracion/tours/:id/salidas')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  crearSalidaTour(@Param('id') tourId: string, @Body() datos: CrearSalidaDto) {
-    return this.servicio.crearSalidaTour({
+  async crearSalidaTour(
+    @Param('id') tourId: string,
+    @Body() datos: CrearSalidaDto,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const creada = await this.servicio.crearSalidaTour({
       ...datos,
       tourId,
       fechaHoraSalida: new Date(datos.fechaHoraSalida),
     });
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'CREAR',
+      entidad: 'SALIDA',
+      entidadId: creada.id,
+      descripcion: `Programó una salida de tour para ${datos.fechaHoraSalida}`,
+    });
+    return creada;
   }
 
   // ------- Plantillas de salida recurrente -------
@@ -420,32 +523,78 @@ export class CatalogoController {
   }
   @Post('administracion/transportes/:id/plantillas-salida')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  crearPlantillaTransporte(
+  async crearPlantillaTransporte(
     @Param('id') transporteId: string,
     @Body() datos: CrearPlantillaDto,
+    @UsuarioActual() usuario: Usuario,
   ) {
-    return this.plantillas.crear({ ...datos, transporteId });
+    const creada = await this.plantillas.crear({ ...datos, transporteId });
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'CREAR',
+      entidad: 'PLANTILLA_SALIDA',
+      entidadId: creada.id,
+      descripcion: `Creó horario recurrente de transporte (días ${datos.diasSemana.join(",")} a las ${datos.horaSalida})`,
+      detalle: { salidasGeneradas: creada.salidasGeneradas },
+    });
+    return creada;
   }
   @Post('administracion/tours/:id/plantillas-salida')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  crearPlantillaTour(
+  async crearPlantillaTour(
     @Param('id') tourId: string,
     @Body() datos: CrearPlantillaDto,
+    @UsuarioActual() usuario: Usuario,
   ) {
-    return this.plantillas.crear({ ...datos, tourId });
+    const creada = await this.plantillas.crear({ ...datos, tourId });
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'CREAR',
+      entidad: 'PLANTILLA_SALIDA',
+      entidadId: creada.id,
+      descripcion: `Creó horario recurrente de tour (días ${datos.diasSemana.join(",")} a las ${datos.horaSalida})`,
+      detalle: { salidasGeneradas: creada.salidasGeneradas },
+    });
+    return creada;
   }
   @Patch('administracion/plantillas-salida/:id')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  actualizarPlantilla(
+  async actualizarPlantilla(
     @Param('id') id: string,
     @Body() cambios: ActualizarPlantillaDto,
+    @UsuarioActual() usuario: Usuario,
   ) {
-    return this.plantillas.actualizar(id, cambios);
+    const actualizada = await this.plantillas.actualizar(id, cambios);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'ACTUALIZAR',
+      entidad: 'PLANTILLA_SALIDA',
+      entidadId: id,
+      descripcion:
+        cambios.activo === false
+          ? 'Pausó un horario recurrente'
+          : cambios.activo === true
+            ? 'Reactivó un horario recurrente'
+            : 'Actualizó un horario recurrente',
+      detalle: { camposCambiados: Object.keys(cambios) },
+    });
+    return actualizada;
   }
   @Delete('administracion/plantillas-salida/:id')
   @Roles('ADMINISTRADOR', 'OPERADOR')
-  eliminarPlantilla(@Param('id') id: string) {
-    return this.plantillas.eliminar(id);
+  async eliminarPlantilla(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const resultado = await this.plantillas.eliminar(id);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'ELIMINAR',
+      entidad: 'PLANTILLA_SALIDA',
+      entidadId: id,
+      descripcion: 'Eliminó un horario recurrente',
+    });
+    return resultado;
   }
 }
 

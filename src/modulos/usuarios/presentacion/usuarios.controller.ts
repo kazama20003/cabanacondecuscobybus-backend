@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 import { RolUsuario } from '@prisma/client';
+import { AuditoriaService } from '../../../compartido/auditoria/auditoria.service';
 import { PaginacionDto } from '../../../compartido/paginacion';
 import { Roles } from '../../autenticacion/presentacion/roles';
 import { UsuarioActual } from '../../autenticacion/presentacion/usuario-actual';
@@ -18,7 +19,10 @@ class FiltrosUsuariosDto extends PaginacionDto {
 @Controller('administracion/usuarios')
 @Roles('ADMINISTRADOR')
 export class UsuariosController {
-  constructor(private readonly servicio: UsuariosService) {}
+  constructor(
+    private readonly servicio: UsuariosService,
+    private readonly auditoria: AuditoriaService,
+  ) {}
 
   @Get()
   listar(@Query() filtros: FiltrosUsuariosDto) {
@@ -29,11 +33,19 @@ export class UsuariosController {
   }
 
   @Patch(':id')
-  actualizar(
+  async actualizar(
     @Param('id') id: string,
     @Body() cambios: ActualizarUsuarioDto,
     @UsuarioActual() solicitante: { id: string },
   ) {
-    return this.servicio.actualizar(id, cambios, solicitante.id);
+    const actualizado = await this.servicio.actualizar(id, cambios, solicitante.id);
+    await this.auditoria.registrar({
+      usuarioId: solicitante.id,
+      accion: 'ACTUALIZAR',
+      entidad: 'USUARIO',
+      entidadId: id,
+      descripcion: `Actualizó un usuario${cambios.rol ? ` (rol → ${cambios.rol})` : ''}${cambios.activo === false ? ' (desactivado)' : cambios.activo === true ? ' (activado)' : ''}`,
+    });
+    return actualizado;
   }
 }
