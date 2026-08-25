@@ -114,6 +114,7 @@ model Transporte {
   actualizadoEn           DateTime               @updatedAt @map("actualizado_en")
   paradas                 ParadaTransporte[]
   salidas                 SalidaTransporte[]
+  plantillasSalida        PlantillaSalida[]
   traducciones            TraduccionTransporte[]
   imagenes                Imagen[]
   promociones             Promocion[]
@@ -151,8 +152,9 @@ model Tour {
   requiereGuia    Boolean          @default(true) @map("requiere_guia")
   creadoEn        DateTime         @default(now()) @map("creado_en")
   actualizadoEn   DateTime         @updatedAt @map("actualizado_en")
-  itinerarios     ItinerarioTour[]
-  salidas         SalidaTour[]
+  itinerarios      ItinerarioTour[]
+  salidas          SalidaTour[]
+  plantillasSalida PlantillaSalida[]
   traducciones    TraduccionTour[]
   imagenes        Imagen[]
   promociones     Promocion[]
@@ -186,6 +188,7 @@ model Vehiculo {
   activo        Boolean            @default(true)
   creadoEn      DateTime           @default(now()) @map("creado_en")
   salidas       SalidaTransporte[]
+  plantillasSalida PlantillaSalida[]
 
   @@map("vehiculos")
 }
@@ -194,6 +197,7 @@ model SalidaTransporte {
   id                 String       @id @default(uuid()) @db.Uuid
   transporteId       String       @map("transporte_id") @db.Uuid
   vehiculoId         String?      @map("vehiculo_id") @db.Uuid
+  plantillaId        String?      @map("plantilla_id") @db.Uuid
   fechaHoraSalida    DateTime     @map("fecha_hora_salida")
   fechaHoraLlegada   DateTime?    @map("fecha_hora_llegada")
   capacidad          Int
@@ -207,8 +211,10 @@ model SalidaTransporte {
   actualizadoEn      DateTime     @updatedAt @map("actualizado_en")
   transporte         Transporte   @relation(fields: [transporteId], references: [id], onDelete: Restrict)
   vehiculo           Vehiculo?    @relation(fields: [vehiculoId], references: [id], onDelete: SetNull)
+  plantilla          PlantillaSalida? @relation(fields: [plantillaId], references: [id], onDelete: SetNull)
   reservas           Reserva[]
 
+  @@unique([plantillaId, fechaHoraSalida])
   @@index([transporteId, fechaHoraSalida])
   @@map("salidas_transporte")
 }
@@ -216,6 +222,7 @@ model SalidaTransporte {
 model SalidaTour {
   id                 String       @id @default(uuid()) @db.Uuid
   tourId             String       @map("tour_id") @db.Uuid
+  plantillaId        String?      @map("plantilla_id") @db.Uuid
   fechaHoraSalida    DateTime     @map("fecha_hora_salida")
   capacidad          Int
   minimoPasajeros    Int          @default(1) @map("minimo_pasajeros")
@@ -227,10 +234,46 @@ model SalidaTour {
   creadoEn           DateTime     @default(now()) @map("creado_en")
   actualizadoEn      DateTime     @updatedAt @map("actualizado_en")
   tour               Tour         @relation(fields: [tourId], references: [id], onDelete: Restrict)
+  plantilla          PlantillaSalida? @relation(fields: [plantillaId], references: [id], onDelete: SetNull)
   reservas           Reserva[]
 
+  @@unique([plantillaId, fechaHoraSalida])
   @@index([tourId, fechaHoraSalida])
   @@map("salidas_tour")
+}
+
+/// Horario recurrente: genera salidas reales según días de semana y vigencia.
+/// Exactamente uno de transporteId/tourId debe estar presente (validado en la app).
+model PlantillaSalida {
+  id                 String             @id @default(uuid()) @db.Uuid
+  transporteId       String?            @map("transporte_id") @db.Uuid
+  tourId             String?            @map("tour_id") @db.Uuid
+  vehiculoId         String?            @map("vehiculo_id") @db.Uuid
+  /// Hora local de Lima en formato HH:mm (ej. "07:30").
+  horaSalida         String             @map("hora_salida")
+  /// Días ISO: 1=lunes … 7=domingo.
+  diasSemana         Int[]              @map("dias_semana")
+  fechaDesde         DateTime           @map("fecha_desde") @db.Date
+  /// Null = sin fecha final (se generan salidas de forma continua).
+  fechaHasta         DateTime?          @map("fecha_hasta") @db.Date
+  capacidad          Int
+  minimoPasajeros    Int                @default(1) @map("minimo_pasajeros")
+  precioPen          Decimal            @map("precio_pen") @db.Decimal(10, 2)
+  precioUsd          Decimal            @map("precio_usd") @db.Decimal(10, 2)
+  permiteAdelanto    Boolean            @default(true) @map("permite_adelanto")
+  porcentajeAdelanto Int                @default(50) @map("porcentaje_adelanto")
+  activo             Boolean            @default(true)
+  creadoEn           DateTime           @default(now()) @map("creado_en")
+  actualizadoEn      DateTime           @updatedAt @map("actualizado_en")
+  transporte         Transporte?        @relation(fields: [transporteId], references: [id], onDelete: Cascade)
+  tour               Tour?              @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  vehiculo           Vehiculo?          @relation(fields: [vehiculoId], references: [id], onDelete: SetNull)
+  salidasTransporte  SalidaTransporte[]
+  salidasTour        SalidaTour[]
+
+  @@index([transporteId])
+  @@index([tourId])
+  @@map("plantillas_salida")
 }
 
 model Reserva {

@@ -29,9 +29,11 @@ const EsLongitud = () => [IsNumber(), Min(-180), Max(180)];
 function aplicar(decoradores: PropertyDecorator[]): PropertyDecorator {
   return (target, key) => decoradores.forEach((d) => d(target, key));
 }
+import { IsBoolean } from 'class-validator';
 import { PaginacionDto } from '../../../compartido/paginacion';
 import { Roles } from '../../autenticacion/presentacion/roles';
 import { CatalogoService } from '../aplicacion/catalogo.service';
+import { PlantillasSalidaService } from '../aplicacion/plantillas-salida.service';
 
 const IDIOMAS_CATALOGO = ['es', 'en', 'fr', 'it', 'pt', 'zh', 'ja', 'ru', 'de'];
 
@@ -213,10 +215,46 @@ class CrearSalidaDto {
   @IsNumber() @Min(0) precioPen: number;
   @IsNumber() @Min(0) precioUsd: number;
 }
+class CrearPlantillaDto {
+  /** Hora local de Lima, formato HH:mm. */
+  @IsString() horaSalida: string;
+  /** Días ISO: 1=lunes … 7=domingo. */
+  @IsArray() @IsInt({ each: true }) @Min(1, { each: true }) @Max(7, { each: true })
+  diasSemana: number[];
+  @IsDateString() fechaDesde: string;
+  @IsOptional() @IsDateString() fechaHasta?: string;
+  @IsInt() @Min(1) capacidad: number;
+  @IsOptional() @IsInt() @Min(1) minimoPasajeros?: number;
+  @IsNumber() @Min(0) precioPen: number;
+  @IsNumber() @Min(0) precioUsd: number;
+  @IsOptional() @IsString() vehiculoId?: string;
+  @IsOptional() @IsBoolean() permiteAdelanto?: boolean;
+  @IsOptional() @IsInt() @Min(0) @Max(100) porcentajeAdelanto?: number;
+}
+class ActualizarPlantillaDto {
+  @IsOptional() @IsString() horaSalida?: string;
+  @IsOptional() @IsArray() @IsInt({ each: true }) @Min(1, { each: true }) @Max(7, { each: true })
+  diasSemana?: number[];
+  @IsOptional() @IsDateString() fechaDesde?: string;
+  /** Null explícito elimina la fecha final (vigencia indefinida). */
+  @IsOptional() fechaHasta?: string | null;
+  @IsOptional() @IsInt() @Min(1) capacidad?: number;
+  @IsOptional() @IsInt() @Min(1) minimoPasajeros?: number;
+  @IsOptional() @IsNumber() @Min(0) precioPen?: number;
+  @IsOptional() @IsNumber() @Min(0) precioUsd?: number;
+  @IsOptional() @IsString() vehiculoId?: string;
+  @IsOptional() @IsBoolean() activo?: boolean;
+}
+class FiltrosPlantillasDto {
+  @IsOptional() @IsIn(['TRANSPORTE', 'TOUR']) tipo?: 'TRANSPORTE' | 'TOUR';
+}
 
 @Controller()
 export class CatalogoController {
-  constructor(private readonly servicio: CatalogoService) {}
+  constructor(
+    private readonly servicio: CatalogoService,
+    private readonly plantillas: PlantillasSalidaService,
+  ) {}
   @Get('transportes') transportes(@Query() filtros: FiltrosTransportesDto) {
     return this.servicio.listarTransportes(
       filtros,
@@ -372,6 +410,42 @@ export class CatalogoController {
       tourId,
       fechaHoraSalida: new Date(datos.fechaHoraSalida),
     });
+  }
+
+  // ------- Plantillas de salida recurrente -------
+  @Get('administracion/plantillas-salida')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  listarPlantillas(@Query() filtros: FiltrosPlantillasDto) {
+    return this.plantillas.listar(filtros.tipo);
+  }
+  @Post('administracion/transportes/:id/plantillas-salida')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  crearPlantillaTransporte(
+    @Param('id') transporteId: string,
+    @Body() datos: CrearPlantillaDto,
+  ) {
+    return this.plantillas.crear({ ...datos, transporteId });
+  }
+  @Post('administracion/tours/:id/plantillas-salida')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  crearPlantillaTour(
+    @Param('id') tourId: string,
+    @Body() datos: CrearPlantillaDto,
+  ) {
+    return this.plantillas.crear({ ...datos, tourId });
+  }
+  @Patch('administracion/plantillas-salida/:id')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  actualizarPlantilla(
+    @Param('id') id: string,
+    @Body() cambios: ActualizarPlantillaDto,
+  ) {
+    return this.plantillas.actualizar(id, cambios);
+  }
+  @Delete('administracion/plantillas-salida/:id')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  eliminarPlantilla(@Param('id') id: string) {
+    return this.plantillas.eliminar(id);
   }
 }
 
