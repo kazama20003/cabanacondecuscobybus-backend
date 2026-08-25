@@ -45,6 +45,7 @@ export class UsuariosController {
       entidad: 'USUARIO',
       entidadId: id,
       descripcion: `Actualizó un usuario${cambios.rol ? ` (rol → ${cambios.rol})` : ''}${cambios.activo === false ? ' (desactivado)' : cambios.activo === true ? ' (activado)' : ''}`,
+      detalle: { cambios: cambios as unknown as Record<string, unknown> },
     });
     return actualizado;
   }
