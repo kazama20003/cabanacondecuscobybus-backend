@@ -10,7 +10,7 @@
   Put,
   Query,
 } from '@nestjs/common';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsDateString,
@@ -21,6 +21,7 @@ import {
   IsString,
   Max,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -47,6 +48,13 @@ class FiltrosTransportesDto extends PaginacionDto {
 }
 class FiltrosToursDto extends PaginacionDto {
   @IsOptional() @IsString() destino?: string;
+  /** Filtra por tipo: true = solo eventos, false = solo tours normales. */
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined ? undefined : value === 'true' || value === true,
+  )
+  @IsBoolean()
+  esEvento?: boolean;
 }
 
 class ContenidoDto {
@@ -115,6 +123,9 @@ class CrearTourDto {
   @aplicar(EsLatitud()) destinoLatitud: number;
   @aplicar(EsLongitud()) destinoLongitud: number;
   @IsInt() @Min(1) duracionMinutos: number;
+  @IsOptional() @IsBoolean() esEvento?: boolean;
+  @IsOptional() @IsDateString() temporadaInicio?: string;
+  @IsOptional() @IsDateString() temporadaFin?: string;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -150,6 +161,9 @@ class ActualizarTourDto {
   @IsOptional() @aplicar(EsLatitud()) destinoLatitud?: number;
   @IsOptional() @aplicar(EsLongitud()) destinoLongitud?: number;
   @IsOptional() @IsInt() @Min(1) duracionMinutos?: number;
+  @IsOptional() @IsBoolean() esEvento?: boolean;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsDateString() temporadaInicio?: string | null;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsDateString() temporadaFin?: string | null;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -287,7 +301,7 @@ export class CatalogoController {
     return this.servicio.obtenerTransporte(slug, idioma);
   }
   @Get('tours') tours(@Query() filtros: FiltrosToursDto) {
-    return this.servicio.listarTours(filtros, filtros.destino);
+    return this.servicio.listarTours(filtros, filtros.destino, filtros.esEvento);
   }
   @Get('tours/:slug') tour(
     @Param('slug') slug: string,
