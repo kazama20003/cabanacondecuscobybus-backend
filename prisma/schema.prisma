@@ -151,6 +151,11 @@ model Tour {
   destinoLongitud Decimal          @map("destino_longitud") @db.Decimal(10, 7)
   duracionMinutos Int              @map("duracion_minutos")
   requiereGuia    Boolean          @default(true) @map("requiere_guia")
+  /// Marca el tour como evento estacional (fiesta, feria, temporada de cóndores…).
+  esEvento        Boolean          @default(false) @map("es_evento")
+  /// Ventana de temporada del evento (solo fecha). Null = sin ventana definida.
+  temporadaInicio DateTime?        @map("temporada_inicio") @db.Date
+  temporadaFin    DateTime?        @map("temporada_fin") @db.Date
   creadoEn        DateTime         @default(now()) @map("creado_en")
   actualizadoEn   DateTime         @updatedAt @map("actualizado_en")
   itinerarios      ItinerarioTour[]
@@ -160,6 +165,7 @@ model Tour {
   imagenes        Imagen[]
   promociones     Promocion[]
 
+  @@index([esEvento])
   @@map("tours")
 }
 
