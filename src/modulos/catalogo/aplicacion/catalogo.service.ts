@@ -106,10 +106,15 @@ export class CatalogoService {
     return { ...transporte, paradas, traducciones: traduccion ? [traduccion] : [] };
   }
 
-  async listarTours(paginacion: PaginacionDto, destino?: string) {
+  async listarTours(
+    paginacion: PaginacionDto,
+    destino?: string,
+    esEvento?: boolean,
+  ) {
     const { skip, take, pagina, porPagina } = rangoPaginacion(paginacion);
     const where = {
       activo: true,
+      ...(esEvento !== undefined ? { esEvento } : {}),
       ...(destino
         ? { destinoNombre: { contains: destino, mode: 'insensitive' as const } }
         : {}),
@@ -289,6 +294,9 @@ export class CatalogoService {
     destinoLongitud: number;
     duracionMinutos: number;
     requiereGuia?: boolean;
+    esEvento?: boolean;
+    temporadaInicio?: string;
+    temporadaFin?: string;
     medios?: MedioEntrada[];
     contenido?: ContenidoEntrada;
   }) {
@@ -314,14 +322,20 @@ export class CatalogoService {
       destinoLongitud: number;
       duracionMinutos: number;
       requiereGuia?: boolean;
+      esEvento?: boolean;
+      temporadaInicio?: string;
+      temporadaFin?: string;
     },
     medios?: MedioEntrada[],
   ) {
+    const { temporadaInicio, temporadaFin, ...resto } = base;
     return this.prisma.tour.create({
       data: {
-        ...base,
+        ...resto,
         destinoLatitud: new Prisma.Decimal(base.destinoLatitud),
         destinoLongitud: new Prisma.Decimal(base.destinoLongitud),
+        temporadaInicio: temporadaInicio ? new Date(temporadaInicio) : null,
+        temporadaFin: temporadaFin ? new Date(temporadaFin) : null,
         imagenes: medios?.length
           ? {
               create: medios.map((medio, indice) => ({
@@ -406,6 +420,9 @@ export class CatalogoService {
       destinoLongitud?: number;
       duracionMinutos?: number;
       requiereGuia?: boolean;
+      esEvento?: boolean;
+      temporadaInicio?: string | null;
+      temporadaFin?: string | null;
       medios?: MedioEntrada[];
       contenido?: ContenidoEntrada;
     },
@@ -427,6 +444,13 @@ export class CatalogoService {
         }),
         ...(base.duracionMinutos !== undefined && { duracionMinutos: base.duracionMinutos }),
         ...(base.requiereGuia !== undefined && { requiereGuia: base.requiereGuia }),
+        ...(base.esEvento !== undefined && { esEvento: base.esEvento }),
+        ...(base.temporadaInicio !== undefined && {
+          temporadaInicio: base.temporadaInicio ? new Date(base.temporadaInicio) : null,
+        }),
+        ...(base.temporadaFin !== undefined && {
+          temporadaFin: base.temporadaFin ? new Date(base.temporadaFin) : null,
+        }),
       },
     });
 
