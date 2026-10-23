@@ -137,6 +137,12 @@ class CrearTourDto {
   @Type(() => ContenidoDto)
   contenido?: ContenidoDto;
 }
+class PuntoEventoDto {
+  @IsString() titulo: string;
+  @IsString() descripcion: string;
+  @IsOptional() @aplicar(EsLatitud()) latitud?: number;
+  @IsOptional() @aplicar(EsLongitud()) longitud?: number;
+}
 class CrearEventoEspecialDto {
   @IsString() slug: string;
   @IsString() destinoNombre: string;
@@ -151,6 +157,10 @@ class CrearEventoEspecialDto {
   medios: MedioDto[];
   @ValidateNested() @Type(() => ContenidoDto)
   contenido: ContenidoDto;
+  @IsOptional() @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PuntoEventoDto)
+  puntos?: PuntoEventoDto[];
 }
 class ActualizarTransporteDto {
   @IsOptional() @IsString() slug?: string;
@@ -348,6 +358,7 @@ export class CatalogoController {
         temporadaInicio: datos.temporadaInicio,
         temporadaFin: datos.temporadaFin,
         medios: datos.medios.length,
+        puntos: datos.puntos?.length ?? 0,
         eventoEspecial: true,
       },
     });
