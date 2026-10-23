@@ -289,10 +289,63 @@ export class ReservasService {
       return { ...pago, estado: EstadoPago.APROBADO };
     });
     if (pagoFueConfirmado) {
-      const reserva = await this.prisma.reserva.findUnique({ where: { id: pago.reservaId } });
+      const reserva = await this.prisma.reserva.findUnique({
+        where: { id: pago.reservaId },
+      });
       if (reserva) void this.notificaciones.pagoAprobado(reserva);
     }
     return pago;
+  }
+
+  async listarPagosAdministracion(filtros: {
+    pagina?: number;
+    porPagina?: number;
+    estado?: EstadoPago;
+    metodo?: MetodoPago;
+    codigoReserva?: string;
+  }) {
+    const pagina = Math.max(1, Math.trunc(filtros.pagina ?? 1));
+    const porPagina = Math.min(
+      100,
+      Math.max(1, Math.trunc(filtros.porPagina ?? 20)),
+    );
+    const where: Prisma.PagoWhereInput = {
+      ...(filtros.estado ? { estado: filtros.estado } : {}),
+      ...(filtros.metodo ? { metodo: filtros.metodo } : {}),
+      ...(filtros.codigoReserva
+        ? {
+            reserva: {
+              codigo: {
+                contains: filtros.codigoReserva,
+                mode: 'insensitive',
+              },
+            },
+          }
+        : {}),
+    };
+
+    const [datos, total] = await Promise.all([
+      this.prisma.pago.findMany({
+        where,
+        orderBy: { creadoEn: 'desc' },
+        skip: (pagina - 1) * porPagina,
+        take: porPagina,
+        include: {
+          reserva: {
+            select: { codigo: true, correoContacto: true, estado: true },
+          },
+        },
+      }),
+      this.prisma.pago.count({ where }),
+    ]);
+
+    return {
+      datos,
+      total,
+      pagina,
+      porPagina,
+      totalPaginas: Math.ceil(total / porPagina),
+    };
   }
 
   private codigo() {

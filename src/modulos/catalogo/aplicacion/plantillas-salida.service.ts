@@ -75,6 +75,28 @@ export class PlantillasSalidaService {
       );
     }
     this.validarHorario(datos.horaSalida, datos.diasSemana);
+    if (datos.transporteId) {
+      const transporte = await this.prisma.transporte.findFirst({
+        where: { id: datos.transporteId, activo: true },
+        select: { id: true },
+      });
+      if (!transporte) {
+        throw new BadRequestException(
+          'La ruta seleccionada no existe o está inactiva. Actívala antes de crear un horario.',
+        );
+      }
+    }
+    if (datos.tourId) {
+      const tour = await this.prisma.tour.findFirst({
+        where: { id: datos.tourId, activo: true },
+        select: { id: true },
+      });
+      if (!tour) {
+        throw new BadRequestException(
+          'El tour seleccionado no existe o está inactivo. Actívalo antes de crear un horario.',
+        );
+      }
+    }
     const plantilla = await this.prisma.plantillaSalida.create({
       data: {
         transporteId: datos.transporteId,
