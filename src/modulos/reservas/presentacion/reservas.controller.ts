@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { Type } from 'class-transformer';
 import {
+  IsInt,
   IsArray,
   IsEmail,
   IsEnum,
@@ -17,7 +18,7 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { MetodoPago, Moneda } from '@prisma/client';
+import { EstadoPago, MetodoPago, Moneda } from '@prisma/client';
 import { GuardiaAdministrador } from '../../autenticacion/presentacion/guardia-administrador';
 import { GuardiaJwt } from '../../autenticacion/presentacion/guardia-jwt';
 import { UsuarioActual } from '../../autenticacion/presentacion/usuario-actual';
@@ -48,6 +49,13 @@ class ComprobanteSaldoDto {
   @IsString() urlComprobante: string;
   @IsEnum(MetodoPago) metodo: MetodoPago;
 }
+class FiltrosPagosAdminDto {
+  @IsOptional() @Type(() => Number) @IsInt() pagina?: number;
+  @IsOptional() @Type(() => Number) @IsInt() porPagina?: number;
+  @IsOptional() @IsEnum(EstadoPago) estado?: EstadoPago;
+  @IsOptional() @IsEnum(MetodoPago) metodo?: MetodoPago;
+  @IsOptional() @IsString() codigoReserva?: string;
+}
 
 @Controller('reservas')
 export class ReservasController {
@@ -56,9 +64,14 @@ export class ReservasController {
     private readonly guardiaJwt: GuardiaJwt,
   ) {}
 
-  @Post() crear(
+  @Post()
+  crear(
     @Body() datos: CrearReservaDto,
-    @Req() solicitud: { headers: Record<string, string>; usuario?: { id: string } },
+    @Req()
+    solicitud: {
+      headers: Record<string, string>;
+      usuario?: { id: string };
+    },
   ) {
     // Autenticación opcional: si viene un JWT válido, la reserva queda
     // vinculada a la cuenta del turista (aparece en "mis reservas").
@@ -68,7 +81,9 @@ export class ReservasController {
         switchToHttp: () => ({ getRequest: () => solicitud }),
       } as Parameters<GuardiaJwt['canActivate']>[0]);
       usuarioId = solicitud.usuario?.id;
-    } catch {}
+    } catch {
+      // Si el token opcional no es válido, la reserva se crea como invitado.
+    }
     return this.servicio.crear({ ...datos, usuarioId });
   }
 
@@ -96,6 +111,11 @@ export class ReservasController {
     @Body() datos: ComprobanteSaldoDto,
   ) {
     return this.servicio.registrarComprobanteSaldo(codigo, token, datos);
+  }
+  @Get('administracion/pagos')
+  @UseGuards(GuardiaAdministrador)
+  listarPagosAdministracion(@Query() filtros: FiltrosPagosAdminDto) {
+    return this.servicio.listarPagosAdministracion(filtros);
   }
   @Post('administracion/pagos/:pagoId/confirmar')
   @UseGuards(GuardiaAdministrador)
