@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   EstadoSalida,
@@ -586,7 +591,12 @@ export class CatalogoService {
         this.prisma.salidaTransporte.findMany({
           include: {
             transporte: {
-              select: { origenNombre: true, destinoNombre: true, slug: true },
+              select: {
+                origenNombre: true,
+                destinoNombre: true,
+                slug: true,
+                activo: true,
+              },
             },
             vehiculo: true,
             reservas: {
@@ -618,7 +628,7 @@ export class CatalogoService {
     const [datos, total] = await this.prisma.$transaction([
       this.prisma.salidaTour.findMany({
         include: {
-          tour: { select: { destinoNombre: true, slug: true } },
+          tour: { select: { destinoNombre: true, slug: true, activo: true } },
           reservas: {
             where: { estado: { notIn: ['CANCELADA', 'VENCIDA'] } },
             select: { cantidadPasajeros: true },
@@ -674,15 +684,29 @@ export class CatalogoService {
     if (tipo === 'TRANSPORTE') {
       const salida = await this.prisma.salidaTransporte.findUnique({
         where: { id },
+        include: { transporte: { select: { activo: true } } },
       });
       if (!salida) throw new NotFoundException('Salida no encontrada');
+      if (cambios.estado === EstadoSalida.A_LA_VENTA && !salida.transporte.activo) {
+        throw new BadRequestException(
+          'No se puede publicar una salida de un transporte inactivo.',
+        );
+      }
       return this.prisma.salidaTransporte.update({
         where: { id },
         data: { ...data, vehiculoId: cambios.vehiculoId },
       });
     }
-    const salida = await this.prisma.salidaTour.findUnique({ where: { id } });
+    const salida = await this.prisma.salidaTour.findUnique({
+      where: { id },
+      include: { tour: { select: { activo: true } } },
+    });
     if (!salida) throw new NotFoundException('Salida no encontrada');
+    if (cambios.estado === EstadoSalida.A_LA_VENTA && !salida.tour.activo) {
+      throw new BadRequestException(
+        'No se puede publicar una salida de un tour inactivo.',
+      );
+    }
     return this.prisma.salidaTour.update({ where: { id }, data });
   }
 
@@ -1066,7 +1090,7 @@ export class CatalogoService {
     });
   }
 
-  crearSalidaTransporte(datos: {
+  async crearSalidaTransporte(datos: {
     transporteId: string;
     fechaHoraSalida: Date;
     capacidad: number;
@@ -1074,6 +1098,15 @@ export class CatalogoService {
     precioPen: number;
     precioUsd: number;
   }) {
+    const transporte = await this.prisma.transporte.findFirst({
+      where: { id: datos.transporteId, activo: true },
+      select: { id: true },
+    });
+    if (!transporte) {
+      throw new BadRequestException(
+        'La ruta seleccionada no existe o está inactiva. Actívala antes de programar una salida.',
+      );
+    }
     return this.prisma.salidaTransporte.create({
       data: {
         ...datos,
@@ -1085,7 +1118,7 @@ export class CatalogoService {
     });
   }
 
-  crearSalidaTour(datos: {
+  async crearSalidaTour(datos: {
     tourId: string;
     fechaHoraSalida: Date;
     capacidad: number;
@@ -1093,6 +1126,15 @@ export class CatalogoService {
     precioPen: number;
     precioUsd: number;
   }) {
+    const tour = await this.prisma.tour.findFirst({
+      where: { id: datos.tourId, activo: true },
+      select: { id: true },
+    });
+    if (!tour) {
+      throw new BadRequestException(
+        'El tour seleccionado no existe o está inactivo. Actívalo antes de programar una salida.',
+      );
+    }
     return this.prisma.salidaTour.create({
       data: {
         ...datos,
