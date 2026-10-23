@@ -128,6 +128,10 @@ export class CatalogoService {
       this.prisma.tour.findMany({
         where,
         include: {
+          itinerarios: {
+            include: { imagenes: { orderBy: { orden: 'asc' } } },
+            orderBy: { orden: 'asc' },
+          },
           traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
           imagenes: { orderBy: { orden: 'asc' } },
           salidas: { orderBy: { fechaHoraSalida: 'asc' } },
@@ -155,6 +159,10 @@ export class CatalogoService {
       this.prisma.tour.findMany({
         where,
         include: {
+          itinerarios: {
+            include: { imagenes: { orderBy: { orden: 'asc' } } },
+            orderBy: { orden: 'asc' },
+          },
           traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
           imagenes: { orderBy: { orden: 'asc' } },
           salidas: { orderBy: { fechaHoraSalida: 'asc' } },
@@ -176,6 +184,10 @@ export class CatalogoService {
       this.prisma.tour.findMany({
         where,
         include: {
+          itinerarios: {
+            include: { imagenes: { orderBy: { orden: 'asc' } } },
+            orderBy: { orden: 'asc' },
+          },
           traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
           imagenes: { orderBy: { orden: 'asc' } },
           salidas: { orderBy: { fechaHoraSalida: 'asc' } },
@@ -393,13 +405,35 @@ export class CatalogoService {
     temporadaFin?: string;
     medios?: MedioEntrada[];
     contenido?: ContenidoEntrada;
+    puntos?: {
+      titulo: string;
+      descripcion: string;
+      latitud?: number;
+      longitud?: number;
+    }[];
   }) {
     this.validarTemporadaEvento(
       datos.temporadaInicio,
       datos.temporadaFin,
       datos.medios?.length ?? 0,
     );
-    return this.crearTour({ ...datos, esEvento: true });
+    const { puntos, ...evento } = datos;
+    const creado = await this.crearTour({ ...evento, esEvento: true });
+    if (puntos?.length && creado) {
+      await this.definirItinerario(creado.id, puntos);
+      return this.prisma.tour.findUnique({
+        where: { id: creado.id },
+        include: {
+          imagenes: { orderBy: { orden: 'asc' } },
+          traducciones: true,
+          itinerarios: {
+            include: { imagenes: { orderBy: { orden: 'asc' } } },
+            orderBy: { orden: 'asc' },
+          },
+        },
+      });
+    }
+    return creado;
   }
 
   private validarTemporadaEvento(
