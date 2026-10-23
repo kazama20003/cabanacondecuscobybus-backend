@@ -141,6 +141,63 @@ export class CatalogoService {
     return construirPaginado(datos, total, pagina, porPagina);
   }
 
+  /** Eventos futuros para la vitrina pública; los vencidos quedan fuera. */
+  async listarEventosPublicos(paginacion: PaginacionDto) {
+    const { skip, take, pagina, porPagina } = rangoPaginacion(paginacion);
+    const hoy = new Date();
+    hoy.setUTCHours(0, 0, 0, 0);
+    const where: Prisma.TourWhereInput = {
+      activo: true,
+      esEvento: true,
+      OR: [{ temporadaFin: null }, { temporadaFin: { gte: hoy } }],
+    };
+    const [datos, total] = await this.prisma.$transaction([
+      this.prisma.tour.findMany({
+        where,
+        include: {
+          traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
+          imagenes: { orderBy: { orden: 'asc' } },
+          salidas: { orderBy: { fechaHoraSalida: 'asc' } },
+        },
+        orderBy: [{ temporadaInicio: 'asc' }, { creadoEn: 'desc' }],
+        skip,
+        take,
+      }),
+      this.prisma.tour.count({ where }),
+    ]);
+    return construirPaginado(datos, total, pagina, porPagina);
+  }
+
+  /** El administrador necesita revisar incluso eventos vencidos o inactivos. */
+  async listarEventosAdmin(paginacion: PaginacionDto) {
+    const { skip, take, pagina, porPagina } = rangoPaginacion(paginacion);
+    const where = { esEvento: true };
+    const [datos, total] = await this.prisma.$transaction([
+      this.prisma.tour.findMany({
+        where,
+        include: {
+          traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
+          imagenes: { orderBy: { orden: 'asc' } },
+          salidas: { orderBy: { fechaHoraSalida: 'asc' } },
+        },
+        orderBy: [{ temporadaInicio: 'desc' }, { creadoEn: 'desc' }],
+        skip,
+        take,
+      }),
+      this.prisma.tour.count({ where }),
+    ]);
+    return construirPaginado(datos, total, pagina, porPagina);
+  }
+
+  async actualizarEstadoEventoEspecial(id: string, activo: boolean) {
+    const evento = await this.prisma.tour.findFirst({
+      where: { id, esEvento: true },
+      select: { id: true },
+    });
+    if (!evento) throw new NotFoundException('Evento especial no encontrado');
+    return this.prisma.tour.update({ where: { id }, data: { activo } });
+  }
+
   async obtenerTour(slug: string, idioma: string) {
     const tour = await this.prisma.tour.findFirst({
       where: { slug, activo: true },
@@ -305,6 +362,13 @@ export class CatalogoService {
     medios?: MedioEntrada[];
     contenido?: ContenidoEntrada;
   }) {
+    if (datos.esEvento) {
+      this.validarTemporadaEvento(
+        datos.temporadaInicio,
+        datos.temporadaFin,
+        datos.medios?.length ?? 0,
+      );
+    }
     const { medios, contenido, ...base } = datos;
     const tour = await this.crearTourBase(base, medios);
     if (contenido) {
@@ -317,6 +381,53 @@ export class CatalogoService {
         traducciones: true,
       },
     });
+  }
+
+  async crearEventoEspecial(datos: {
+    slug: string;
+    destinoNombre: string;
+    destinoLatitud: number;
+    destinoLongitud: number;
+    duracionMinutos: number;
+    temporadaInicio?: string;
+    temporadaFin?: string;
+    medios?: MedioEntrada[];
+    contenido?: ContenidoEntrada;
+  }) {
+    this.validarTemporadaEvento(
+      datos.temporadaInicio,
+      datos.temporadaFin,
+      datos.medios?.length ?? 0,
+    );
+    return this.crearTour({ ...datos, esEvento: true });
+  }
+
+  private validarTemporadaEvento(
+    inicio?: string | Date | null,
+    fin?: string | Date | null,
+    cantidadMedios = 0,
+  ) {
+    if (!inicio || !fin) {
+      throw new BadRequestException(
+        'Un evento especial requiere fecha de inicio y fecha de fin',
+      );
+    }
+    const fechaInicio = new Date(inicio);
+    const fechaFin = new Date(fin);
+    if (
+      Number.isNaN(fechaInicio.getTime()) ||
+      Number.isNaN(fechaFin.getTime()) ||
+      fechaFin < fechaInicio
+    ) {
+      throw new BadRequestException(
+        'La fecha de fin del evento debe ser igual o posterior a la fecha de inicio',
+      );
+    }
+    if (cantidadMedios < 1) {
+      throw new BadRequestException(
+        'Un evento especial requiere al menos una imagen o video',
+      );
+    }
   }
 
   private crearTourBase(
@@ -432,9 +543,24 @@ export class CatalogoService {
       contenido?: ContenidoEntrada;
     },
   ) {
-    const existente = await this.prisma.tour.findUnique({ where: { id } });
+    const existente = await this.prisma.tour.findUnique({
+      where: { id },
+      include: { imagenes: { select: { id: true } } },
+    });
     if (!existente) throw new NotFoundException('Tour no encontrado');
     const { medios, contenido, ...base } = datos;
+    const seraEvento = datos.esEvento ?? existente.esEvento;
+    if (seraEvento) {
+      this.validarTemporadaEvento(
+        datos.temporadaInicio === undefined
+          ? existente.temporadaInicio
+          : datos.temporadaInicio,
+        datos.temporadaFin === undefined
+          ? existente.temporadaFin
+          : datos.temporadaFin,
+        medios?.length ?? existente.imagenes.length,
+      );
+    }
 
     await this.prisma.tour.update({
       where: { id },

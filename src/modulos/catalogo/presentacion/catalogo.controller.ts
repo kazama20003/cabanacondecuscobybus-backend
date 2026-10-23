@@ -12,6 +12,7 @@
 } from '@nestjs/common';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMinSize,
   IsArray,
   IsDateString,
   IsIn,
@@ -136,6 +137,21 @@ class CrearTourDto {
   @Type(() => ContenidoDto)
   contenido?: ContenidoDto;
 }
+class CrearEventoEspecialDto {
+  @IsString() slug: string;
+  @IsString() destinoNombre: string;
+  @aplicar(EsLatitud()) destinoLatitud: number;
+  @aplicar(EsLongitud()) destinoLongitud: number;
+  @IsInt() @Min(1) duracionMinutos: number;
+  @IsDateString() temporadaInicio: string;
+  @IsDateString() temporadaFin: string;
+  @IsArray() @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => MedioDto)
+  medios: MedioDto[];
+  @ValidateNested() @Type(() => ContenidoDto)
+  contenido: ContenidoDto;
+}
 class ActualizarTransporteDto {
   @IsOptional() @IsString() slug?: string;
   @IsOptional() @IsString() origenNombre?: string;
@@ -173,6 +189,9 @@ class ActualizarTourDto {
   @ValidateNested()
   @Type(() => ContenidoDto)
   contenido?: ContenidoDto;
+}
+class ActualizarEstadoEventoDto {
+  @IsBoolean() activo: boolean;
 }
 class DefinirParadasDto {
   @IsArray()
@@ -302,6 +321,55 @@ export class CatalogoController {
   }
   @Get('tours') tours(@Query() filtros: FiltrosToursDto) {
     return this.servicio.listarTours(filtros, filtros.destino, filtros.esEvento);
+  }
+  @Get('eventos') eventos(@Query() paginacion: PaginacionDto) {
+    return this.servicio.listarEventosPublicos(paginacion);
+  }
+  @Get('administracion/eventos')
+  @Roles('ADMINISTRADOR')
+  eventosAdmin(@Query() paginacion: PaginacionDto) {
+    return this.servicio.listarEventosAdmin(paginacion);
+  }
+  @Post('administracion/eventos')
+  @Roles('ADMINISTRADOR')
+  async crearEventoEspecial(
+    @Body() datos: CrearEventoEspecialDto,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const creado = await this.servicio.crearEventoEspecial(datos);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'CREAR',
+      entidad: 'TOUR',
+      entidadId: creado?.id,
+      descripcion: `Programó el evento especial ${datos.contenido.titulo}`,
+      detalle: {
+        destino: datos.destinoNombre,
+        temporadaInicio: datos.temporadaInicio,
+        temporadaFin: datos.temporadaFin,
+        medios: datos.medios.length,
+        eventoEspecial: true,
+      },
+    });
+    return creado;
+  }
+  @Patch('administracion/eventos/:id/estado')
+  @Roles('ADMINISTRADOR')
+  async actualizarEstadoEvento(
+    @Param('id') id: string,
+    @Body() datos: ActualizarEstadoEventoDto,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const actualizado = await this.servicio.actualizarEstadoEventoEspecial(id, datos.activo);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'ACTUALIZAR',
+      entidad: 'TOUR',
+      entidadId: id,
+      descripcion: `${datos.activo ? 'Activó' : 'Desactivó'} el evento especial ${actualizado.destinoNombre}`,
+      detalle: { activo: datos.activo, eventoEspecial: true },
+    });
+    return actualizado;
   }
   @Get('tours/:slug') tour(
     @Param('slug') slug: string,
