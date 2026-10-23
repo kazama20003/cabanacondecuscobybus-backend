@@ -148,7 +148,8 @@ export class CatalogoService {
   /** Eventos futuros para la vitrina pública; los vencidos quedan fuera. */
   async listarEventosPublicos(paginacion: PaginacionDto) {
     const { skip, take, pagina, porPagina } = rangoPaginacion(paginacion);
-    const hoy = new Date();
+    const ahora = new Date();
+    const hoy = new Date(ahora);
     hoy.setUTCHours(0, 0, 0, 0);
     const where: Prisma.TourWhereInput = {
       activo: true,
@@ -165,7 +166,13 @@ export class CatalogoService {
           },
           traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
           imagenes: { orderBy: { orden: 'asc' } },
-          salidas: { orderBy: { fechaHoraSalida: 'asc' } },
+          salidas: {
+            where: {
+              estado: { in: [EstadoSalida.A_LA_VENTA, EstadoSalida.PENDIENTE_DE_MINIMO, EstadoSalida.CONFIRMADA] },
+              fechaHoraSalida: { gt: ahora },
+            },
+            orderBy: { fechaHoraSalida: 'asc' },
+          },
         },
         orderBy: [{ temporadaInicio: 'asc' }, { creadoEn: 'desc' }],
         skip,
@@ -211,12 +218,20 @@ export class CatalogoService {
   }
 
   async obtenerTour(slug: string, idioma: string) {
+    const ahora = new Date();
     const tour = await this.prisma.tour.findFirst({
       where: { slug, activo: true },
       include: {
         itinerarios: { include: { imagenes: { orderBy: { orden: 'asc' } } }, orderBy: { orden: 'asc' } },
         imagenes: { orderBy: { orden: 'asc' } },
         traducciones: { where: { estado: EstadoTraduccion.PUBLICADA } },
+        salidas: {
+          where: {
+            estado: { in: [EstadoSalida.A_LA_VENTA, EstadoSalida.PENDIENTE_DE_MINIMO, EstadoSalida.CONFIRMADA] },
+            fechaHoraSalida: { gt: ahora },
+          },
+          orderBy: { fechaHoraSalida: 'asc' },
+        },
       },
     });
     if (!tour) throw new NotFoundException('Tour no encontrado');
