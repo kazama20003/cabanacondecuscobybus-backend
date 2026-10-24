@@ -423,8 +423,11 @@ export class CatalogoService {
     puntos?: {
       titulo: string;
       descripcion: string;
+      minutosDesdeSalida?: number;
+      duracionEstimadaMinutos?: number;
       latitud?: number;
       longitud?: number;
+      medios?: MedioEntrada[];
     }[];
   }) {
     this.validarTemporadaEvento(
@@ -697,6 +700,8 @@ export class CatalogoService {
       items: {
       titulo: string;
       descripcion: string;
+      minutosDesdeSalida?: number;
+      duracionEstimadaMinutos?: number;
       latitud?: number;
         longitud?: number;
         medios?: MedioEntrada[];
@@ -704,6 +709,29 @@ export class CatalogoService {
   ) {
     const tour = await this.prisma.tour.findUnique({ where: { id: tourId } });
     if (!tour) throw new NotFoundException('Tour no encontrado');
+    let finAnterior = 0;
+    for (const [indice, item] of items.entries()) {
+      const tieneInicio = item.minutosDesdeSalida !== undefined;
+      const tieneDuracion = item.duracionEstimadaMinutos !== undefined;
+      if (tieneInicio !== tieneDuracion) {
+        throw new BadRequestException(
+          `La etapa ${indice + 1} debe indicar inicio y duración estimados juntos`,
+        );
+      }
+      if (!tieneInicio || item.minutosDesdeSalida === undefined || item.duracionEstimadaMinutos === undefined) continue;
+      if (item.minutosDesdeSalida < finAnterior) {
+        throw new BadRequestException(
+          `El horario de la etapa ${indice + 1} se cruza con la etapa anterior`,
+        );
+      }
+      const finEtapa = item.minutosDesdeSalida + item.duracionEstimadaMinutos;
+      if (finEtapa > tour.duracionMinutos) {
+        throw new BadRequestException(
+          `La etapa ${indice + 1} supera la duración total del tour`,
+        );
+      }
+      finAnterior = finEtapa;
+    }
     const imagenesAnteriores = await this.prisma.imagen.findMany({
       where: { itinerarioTour: { tourId } },
       select: { clave: true, tipo: true },
@@ -727,6 +755,8 @@ export class CatalogoService {
             tituloI18n: titulosI18n[indice],
             descripcion: item.descripcion,
             descripcionI18n: descripcionesI18n[indice],
+            minutosDesdeSalida: item.minutosDesdeSalida ?? null,
+            duracionEstimadaMinutos: item.duracionEstimadaMinutos ?? null,
             latitud:
               item.latitud !== undefined ? new Prisma.Decimal(item.latitud) : null,
             longitud:
@@ -1214,6 +1244,20 @@ export class CatalogoService {
       where: { id: transporteId },
     });
     if (!transporte) throw new NotFoundException('Transporte no encontrado');
+    let ultimoMinuto = -1;
+    for (const [indice, parada] of paradas.entries()) {
+      if (parada.minutos < ultimoMinuto) {
+        throw new BadRequestException(
+          `El punto ${indice + 1} debe aparecer después del punto anterior`,
+        );
+      }
+      if (parada.minutos + (parada.duracionParadaMinutos ?? 0) > transporte.duracionMinutosEstimada) {
+        throw new BadRequestException(
+          `El tiempo del punto ${indice + 1} supera la duración estimada del trayecto`,
+        );
+      }
+      ultimoMinuto = parada.minutos;
+    }
     const imagenesAnteriores = await this.prisma.imagen.findMany({
       where: { paradaTransporte: { transporteId } },
       select: { clave: true, tipo: true },

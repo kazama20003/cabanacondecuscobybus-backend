@@ -175,6 +175,8 @@ model ItinerarioTour {
   orden       Int
   titulo      String
   descripcion String
+  minutosDesdeSalida     Int?     @map("minutos_desde_salida")
+  duracionEstimadaMinutos Int?     @map("duracion_estimada_minutos")
   tituloI18n      Json?    @map("titulo_i18n")
   descripcionI18n Json?    @map("descripcion_i18n")
   latitud     Decimal? @db.Decimal(10, 7)
