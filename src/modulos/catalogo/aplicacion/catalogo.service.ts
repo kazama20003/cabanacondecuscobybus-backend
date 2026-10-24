@@ -1309,6 +1309,26 @@ export class CatalogoService {
     });
   }
 
+  async actualizarDescripcionParada(id: string, descripcion: string) {
+    const parada = await this.prisma.paradaTransporte.findUnique({ where: { id } });
+    if (!parada) throw new NotFoundException('Punto de recorrido no encontrado');
+    const [descripcionI18n] = await this.construirI18n([descripcion]);
+    return this.prisma.paradaTransporte.update({
+      where: { id },
+      data: { descripcion, descripcionI18n: descripcionI18n ?? Prisma.JsonNull },
+    });
+  }
+
+  async actualizarDescripcionItinerario(id: string, descripcion: string) {
+    const etapa = await this.prisma.itinerarioTour.findUnique({ where: { id } });
+    if (!etapa) throw new NotFoundException('Etapa de itinerario no encontrada');
+    const [descripcionI18n] = await this.construirI18n([descripcion]);
+    return this.prisma.itinerarioTour.update({
+      where: { id },
+      data: { descripcion, descripcionI18n: descripcionI18n ?? Prisma.JsonNull },
+    });
+  }
+
   async crearSalidaTransporte(datos: {
     transporteId: string;
     fechaHoraSalida: Date;

@@ -13,9 +13,10 @@ const tours = [
     incluye: 'Recorrido turístico guiado por los espacios indicados en el programa confirmado.',
     noIncluye: 'Entradas a recintos, alimentación, compras personales y servicios no detallados como incluidos.',
     itinerario: [
-      ['Encuentro en el centro histórico', 'El guía confirma el punto y la hora de reunión antes de la salida.'],
-      ['Plaza de Armas y portales', 'Recorrido a pie por la plaza y su entorno para apreciar la arquitectura de sillar y la historia urbana.'],
-      ['Calles y barrios tradicionales', 'Paseo por los espacios que figuren en el programa del día; el ingreso a recintos se coordina según horario y disponibilidad.'],
+      ['Encuentro en el centro histórico', 'El guía confirma el punto exacto y la hora antes de la salida. Se revisa el recorrido del día y se aclaran los ingresos incluidos; llega con calzado cómodo porque la visita se desarrolla principalmente a pie.'],
+      ['Plaza de Armas y portales', 'Recorrido por la plaza y sus portales para reconocer la traza del centro histórico y observar la arquitectura de sillar. El guía explica los elementos visibles desde el espacio público y deja tiempo para fotografías; el ingreso a la Catedral u otros recintos requiere confirmación y puede tener condiciones aparte.'],
+      ['Calles y barrios tradicionales', 'Paseo por las calles incluidas en el programa para observar fachadas, patios y la vida cotidiana del centro. El orden puede variar según afluencia y horarios; iglesias, museos y otros recintos solo se visitan si están abiertos y el acceso está indicado en la reserva.'],
+      ['Cierre del recorrido', 'La visita termina en el punto indicado por el guía, normalmente dentro del área central. Antes de separarte, confirma cómo regresar al alojamiento y qué lugares puedes continuar visitando por cuenta propia.'],
     ],
   },
   {
@@ -26,10 +27,10 @@ const tours = [
     incluye: 'Visita turística al entorno de Salinas y Aguada Blanca según el itinerario confirmado.',
     noIncluye: 'Alimentación, entradas o tasas locales y servicios que no aparezcan expresamente en la confirmación.',
     itinerario: [
-      ['Salida desde Arequipa', 'El punto de recojo y la hora se confirman para la fecha elegida.'],
-      ['Ruta altoandina y miradores', 'Paradas panorámicas sujetas al clima, al estado de la carretera y a las indicaciones de conservación.'],
-      ['Entorno de la laguna de Salinas', 'Tiempo para observar el paisaje y la fauna que pudiera encontrarse a distancia, sin garantía de avistamientos.'],
-      ['Regreso a Arequipa', 'Retorno por carretera; la duración total puede variar por clima y condiciones de la vía.'],
+      ['Salida desde Arequipa', 'El punto de recojo y la hora se confirman para la fecha elegida. Antes de partir, verifica la duración prevista, el equipo recomendado para altura y si el servicio incluye entradas o alimentación.'],
+      ['Corredor altoandino y miradores', 'Traslado hacia el área de Salinas y Aguada Blanca con vistas de volcanes y planicies de altura. Las paradas para observar el paisaje se hacen únicamente en lugares autorizados y dependen del clima, la carretera y el tiempo disponible.'],
+      ['Entorno de la laguna de Salinas', 'Tiempo para contemplar la laguna y su paisaje, que cambia según la estación y el nivel del agua. La fauna se observa a distancia cuando está presente; ningún avistamiento está garantizado y se deben respetar las restricciones de conservación.'],
+      ['Regreso a Arequipa', 'Retorno por carretera al punto acordado. El frío, el viento, el estado de la ruta y las condiciones de altura pueden modificar el horario de llegada; mantén a mano agua, abrigo y tus medicamentos personales.'],
     ],
   },
   {
@@ -40,10 +41,10 @@ const tours = [
     incluye: 'Visita turística a los puntos señalados en el programa confirmado.',
     noIncluye: 'Boleto turístico, alimentación y servicios no descritos expresamente como incluidos.',
     itinerario: [
-      ['Recojo en Arequipa', 'Hora y zona de recojo sujetas a confirmación para la salida seleccionada.'],
-      ['Ruta hacia el valle del Colca', 'Traslado por carretera con paradas panorámicas únicamente donde el programa y la operación lo permitan.'],
-      ['Miradores del Colca', 'Visita al sector de la Cruz del Cóndor si el acceso y el itinerario del día están habilitados. La fauna se observa a distancia y sin garantía de avistamiento.'],
-      ['Retorno a Arequipa', 'El regreso depende del tráfico, el clima y el estado de la ruta.'],
+      ['Recojo en Arequipa', 'La hora y la zona de recojo se confirman para la salida seleccionada. La jornada comienza temprano y el trayecto es largo; consulta con anticipación el desayuno, las entradas y los servicios que cubre tu reserva.'],
+      ['Ruta hacia el valle del Colca', 'Traslado por carretera desde Arequipa hacia Caylloma, con cambios de paisaje y altitud. Solo se realizan paradas panorámicas incluidas en el programa y permitidas por la operación; los tiempos de carretera son referenciales.'],
+      ['Miradores del valle y Cruz del Cóndor', 'Visita a los miradores habilitados que figuren en el itinerario. El acceso a la Cruz del Cóndor depende de las condiciones del día y la observación de fauna nunca se puede garantizar; permanece en senderos señalizados y respeta los espacios de observación.'],
+      ['Regreso a Arequipa', 'Retorno por carretera al punto de recojo o a la zona indicada por el operador. La llegada depende del tráfico, el clima, las paradas confirmadas y el estado de la ruta; organiza conexiones posteriores con margen suficiente.'],
     ],
   },
   {
@@ -54,10 +55,10 @@ const tours = [
     incluye: 'Visita a los puntos de la Ruta del Sillar señalados en el programa confirmado.',
     noIncluye: 'Entradas o aportes locales, alimentación y servicios no indicados como incluidos.',
     itinerario: [
-      ['Punto de encuentro en Arequipa', 'El lugar y el horario de salida se confirman antes del tour.'],
-      ['Canteras de sillar', 'Conoce el paisaje de extracción y el trabajo tradicional de los canteros en las zonas autorizadas.'],
-      ['Quebrada de Culebrillas', 'Caminata por el tramo habilitado, de acuerdo con el estado del acceso y las indicaciones locales.'],
-      ['Regreso a la ciudad', 'Retorno a Arequipa al terminar las visitas programadas.'],
+      ['Punto de encuentro en Arequipa', 'El lugar y el horario se confirman antes del tour. El guía revisa el orden de visita y las condiciones del acceso; lleva calzado cerrado, agua y protección solar.'],
+      ['Canteras de sillar', 'Visita a los sectores autorizados para comprender cómo se extrae y trabaja la piedra volcánica característica de la ciudad. La actividad de los canteros puede variar, por lo que las demostraciones dependen de la jornada; no ingreses a zonas de trabajo sin autorización.'],
+      ['Quebrada de Culebrillas', 'Caminata por el tramo habilitado para observar las formaciones de roca y el paisaje de la quebrada. El suelo puede ser irregular y el acceso puede cambiar por seguridad o clima; sigue el ritmo del grupo y no dejes residuos.'],
+      ['Regreso a la ciudad', 'Retorno a Arequipa al terminar las visitas incluidas. El punto de descenso y la duración se coordinan con el operador según el tráfico y el programa confirmado.'],
     ],
   },
   {
@@ -68,10 +69,10 @@ const tours = [
     incluye: 'Visita a los miradores y espacios que figuren en el itinerario confirmado.',
     noIncluye: 'Consumos, entradas y servicios opcionales que no estén detallados en la reserva.',
     itinerario: [
-      ['Encuentro en Arequipa', 'Confirma el punto y la hora indicados para tu salida.'],
-      ['Mirador de Yanahuara', 'Paseo por el mirador y sus portales; la visibilidad de los volcanes cambia según el clima.'],
-      ['Campiña arequipeña', 'Recorrido panorámico por los sectores incluidos en el programa, sujeto al tráfico y al tiempo disponible.'],
-      ['Retorno al punto de inicio', 'Fin de la visita y regreso según la coordinación del servicio.'],
+      ['Encuentro en Arequipa', 'Confirma el punto y la hora indicados para tu salida y revisa si el recorrido se hará a pie, en vehículo o combinando ambos. Las paradas exactas quedan en el programa confirmado.'],
+      ['Mirador de Yanahuara', 'Paseo por el mirador y sus arcos de sillar para contemplar la ciudad; la vista de los volcanes depende de la nubosidad. El tiempo para fotografías se adapta a la afluencia y a las condiciones del día.'],
+      ['Campiña y entorno de la ciudad', 'Recorrido panorámico por los sectores incluidos en la salida para observar el paisaje agrícola que rodea Arequipa. No se presupone el ingreso a molinos, restaurantes u otros establecimientos: esos accesos deben aparecer expresamente en la confirmación.'],
+      ['Retorno al punto de inicio', 'Fin de la visita en el lugar coordinado con el operador. El orden y la hora de llegada pueden variar por tráfico y por el tiempo que tome cada parada.'],
     ],
   },
   {
@@ -82,10 +83,11 @@ const tours = [
     incluye: 'Visita turística a los parajes accesibles que indique el programa confirmado.',
     noIncluye: 'Alimentación, entradas o aportes locales y servicios no mencionados como incluidos.',
     itinerario: [
-      ['Salida desde Arequipa', 'Hora y punto de recojo se confirman antes de la excursión.'],
-      ['Ruta hacia Pillones e Imata', 'Traslado por carretera altoandina; el recorrido puede cambiar por clima o estado de la vía.'],
-      ['Catarata de Pillones y entorno de Imata', 'Visitas sujetas al acceso, al caudal, al tiempo disponible y a las indicaciones locales.'],
-      ['Regreso a Arequipa', 'Retorno por carretera con duración variable según las condiciones del día.'],
+      ['Salida desde Arequipa', 'La hora y el punto de recojo se confirman antes de la excursión. La ruta alcanza zonas de gran altitud: avisa al operador sobre necesidades de movilidad o salud y lleva abrigo por capas.'],
+      ['Ruta altoandina hacia Pillones e Imata', 'Traslado por carretera a través de paisajes abiertos de altura. El estado de la vía, el clima y la aclimatación pueden afectar el recorrido; las paradas se realizan solo en sitios seguros y autorizados.'],
+      ['Catarata de Pillones', 'Si el acceso está habilitado, se camina hasta el sector de la catarata por terreno natural, que puede ser irregular o resbaladizo. El caudal cambia con la temporada; permanece en senderos permitidos y no te acerques a bordes húmedos.'],
+      ['Formaciones rocosas de Imata', 'Visita al área de formaciones naturales si está incluida y el tiempo permite realizarla. La caminata y la exposición al viento requieren calzado firme y ropa abrigadora; no escales ni alteres las rocas.'],
+      ['Regreso a Arequipa', 'Retorno por carretera. La duración puede variar por las condiciones del día y la altura; la hora estimada se confirma con el operador y no debe usarse como conexión garantizada.'],
     ],
   },
   {
@@ -96,10 +98,10 @@ const tours = [
     incluye: 'Traslado y visitas señaladas en el programa confirmado.',
     noIncluye: 'Alimentación, entradas, consumos en la costa y servicios no especificados en la reserva.',
     itinerario: [
-      ['Salida desde Arequipa', 'Punto de recojo y hora sujetos a confirmación.'],
-      ['Mollendo', 'Tiempo para conocer el sector de la costa incluido en el programa del día.'],
-      ['Humedales de Mejía', 'Visita por las zonas habilitadas; la observación de fauna depende de la temporada.'],
-      ['Retorno a Arequipa', 'Regreso por carretera según el horario y las condiciones de operación.'],
+      ['Salida desde Arequipa', 'El punto de recojo y la hora se confirman para la fecha. Verifica si el itinerario incluye tiempo libre en la costa y qué gastos corren por cuenta propia.'],
+      ['Mollendo y litoral', 'Tiempo para recorrer el sector costero que figure en el programa. El acceso a la playa, el baño de mar y el uso de servicios no forman parte del servicio salvo que se indiquen expresamente; considera la brisa y el estado del mar.'],
+      ['Santuario Nacional Lagunas de Mejía', 'Visita por senderos y áreas habilitadas, respetando las normas del espacio protegido. La presencia de aves depende de la temporada y no se garantiza; observa desde la distancia y evita ruidos o alimentar fauna.'],
+      ['Retorno a Arequipa', 'Regreso por carretera según el horario confirmado y las condiciones de operación. La llegada puede cambiar por tráfico; conserva un margen si tienes una conexión posterior.'],
     ],
   },
   {
@@ -110,10 +112,10 @@ const tours = [
     incluye: 'Visita al complejo arqueológico y a los puntos del valle que figuren en el itinerario confirmado.',
     noIncluye: 'Entrada al complejo, alimentación y servicios no detallados expresamente como incluidos.',
     itinerario: [
-      ['Salida desde Arequipa', 'El punto de encuentro y la hora de salida se confirman para la fecha reservada.'],
-      ['Complejo arqueológico de Toro Muerto', 'Recorrido a pie para conocer los petroglifos y el paisaje del sitio. No toques ni mojes los grabados; sigue los senderos e indicaciones del personal.'],
-      ['Valle de Majes', 'Parada panorámica en los sectores autorizados que permita el programa y el tiempo disponible.'],
-      ['Retorno a Arequipa', 'Regreso por carretera. La duración total, estimada en unas 10 horas, puede variar por tráfico, clima y estado de la vía.'],
+      ['Salida desde Arequipa', 'El punto de encuentro y la hora se confirman para la fecha reservada. Es una jornada larga por carretera; revisa si la salida contempla alimentación, entradas y paradas de descanso antes de partir.'],
+      ['Complejo arqueológico de Toro Muerto', 'Recorrido a pie para observar los bloques grabados y el paisaje árido del sitio. El tiempo de visita depende del acceso y del programa; no toques, mojes ni frotes los petroglifos, y mantente en los senderos y áreas señalizadas.'],
+      ['Valle de Majes', 'Parada panorámica en los sectores autorizados que permita el programa y el tiempo disponible. El valle combina paisaje agrícola y entorno fluvial; cualquier visita a establecimientos, degustación o compra es opcional y debe confirmarse por separado.'],
+      ['Retorno a Arequipa', 'Regreso por carretera al punto acordado. La duración total estimada, de unas 10 horas, es referencial y puede variar por tráfico, clima, accesos y estado de la vía.'],
     ],
   },
   {
@@ -124,10 +126,10 @@ const tours = [
     incluye: 'Traslado y visitas únicamente a los puntos incluidos en el programa confirmado.',
     noIncluye: 'Alojamiento, alimentación, entradas y cualquier servicio no descrito expresamente en la reserva.',
     itinerario: [
-      ['Salida desde Arequipa', 'La hora, el punto de embarque y la duración del viaje se confirman antes de reservar.'],
-      ['Llegada a la provincia de La Unión', 'El recorrido de llegada depende de las condiciones de la carretera y del servicio contratado.'],
-      ['Miradores y pueblos acordados', 'Se visitan solo los puntos incluidos en el programa final y accesibles ese día.'],
-      ['Retorno o continuación del viaje', 'La modalidad y el horario de regreso deben quedar confirmados en la reserva; consulta si el servicio contempla pernocte.'],
+      ['Salida desde Arequipa', 'La hora, el punto de embarque, la unidad y la duración estimada se confirman antes de reservar. Es un trayecto largo por vías de montaña; consulta si el plan contempla una noche fuera, alimentación o cambios de vehículo.'],
+      ['Tramo hacia la provincia de La Unión', 'Viaje por carretera hacia Cotahuasi, con cambios de altura y condiciones de ruta. Los tiempos de paso son aproximados y no implican paradas comerciales; confirma con el transportista los descansos, el equipaje y el punto exacto de llegada.'],
+      ['Cotahuasi y visitas acordadas', 'Tiempo para recorrer únicamente los miradores y localidades detallados en el programa final. No se presume una excursión dentro de la reserva paisajística ni traslados a atractivos alejados; estos requieren vehículo, tiempo y servicios confirmados aparte.'],
+      ['Retorno o continuación del viaje', 'La modalidad, el horario y el lugar de embarque deben quedar confirmados en la reserva. Verifica si el regreso es el mismo día o si incluye pernocte; no planifiques conexiones ajustadas por la duración variable de la carretera.'],
     ],
   },
   {
@@ -138,10 +140,10 @@ const tours = [
     incluye: 'Traslado y visitas detallados en el programa confirmado.',
     noIncluye: 'Entrada a los baños, alimentación y servicios no señalados como incluidos.',
     itinerario: [
-      ['Encuentro en Arequipa', 'Confirma el punto de salida y la hora para tu fecha.'],
-      ['Ruta hacia Yura', 'Traslado por carretera para conocer el paisaje del distrito y sus alrededores.'],
-      ['Visita termal, si está habilitada', 'El acceso y la tarifa dependen del establecimiento; confirma su disponibilidad antes de viajar.'],
-      ['Regreso a Arequipa', 'Retorno según el horario coordinado y las condiciones de la ruta.'],
+      ['Encuentro en Arequipa', 'Confirma el punto de salida, la hora y si el servicio incluye recojo. Consulta qué visitas están contempladas y si se requiere llevar ropa de baño.'],
+      ['Ruta y paisaje de Yura', 'Traslado hacia el distrito para conocer los sectores que figuren en el programa confirmado. Las paradas panorámicas dependen de la disponibilidad del vehículo y del tiempo; el acceso a propiedades o establecimientos no se presume incluido.'],
+      ['Establecimiento termal, solo si está confirmado', 'El ingreso, las piscinas habilitadas, las tarifas y el tiempo de permanencia dependen del operador local. Confirma la disponibilidad antes de viajar; lleva ropa de baño y toalla únicamente si la visita está prevista.'],
+      ['Regreso a Arequipa', 'Retorno al punto acordado según el horario coordinado. El tráfico y las condiciones de la ruta pueden modificar la llegada; alimentación y entradas se consideran aparte salvo detalle expreso en la reserva.'],
     ],
   },
 ];
@@ -174,7 +176,25 @@ async function main() {
       const { itinerario, slug: tourSlug, ...contenido } = tourContenido;
       const foto = fotosPortada[tourSlug];
       await catalogo.actualizarTour(tour.id, { contenido: { titulo: (await prisma.traduccionTour.findUnique({ where: { tourId_idioma: { tourId: tour.id, idioma: 'es' } } }))?.titulo ?? tour.destinoNombre, ...contenido } });
-      await catalogo.definirItinerario(tour.id, itinerario.map(([titulo, descripcion]) => ({ titulo, descripcion })));
+      const etapasPrevias = await prisma.itinerarioTour.findMany({
+        where: { tourId: tour.id },
+        include: { imagenes: { orderBy: { orden: 'asc' } } },
+        orderBy: { orden: 'asc' },
+      });
+      await catalogo.definirItinerario(tour.id, itinerario.map(([titulo, descripcion], indice) => {
+        const anterior = etapasPrevias[indice];
+        const minutosDesdeSalida = Math.round((tour.duracionMinutos * indice) / itinerario.length);
+        const finEtapa = Math.round((tour.duracionMinutos * (indice + 1)) / itinerario.length);
+        return {
+          titulo,
+          descripcion,
+          minutosDesdeSalida,
+          duracionEstimadaMinutos: finEtapa - minutosDesdeSalida,
+          ...(anterior?.latitud != null ? { latitud: Number(anterior.latitud) } : {}),
+          ...(anterior?.longitud != null ? { longitud: Number(anterior.longitud) } : {}),
+          medios: anterior?.imagenes.map(({ url, clave, textoAlterno, tipo }) => ({ url, clave: clave ?? undefined, textoAlterno: textoAlterno ?? undefined, tipo })) ?? [],
+        };
+      }));
       if (foto) {
         const portada = await prisma.imagen.findFirst({
           where: { tourId: tour.id, itinerarioTourId: null },
