@@ -140,8 +140,11 @@ class CrearTourDto {
 class PuntoEventoDto {
   @IsString() titulo: string;
   @IsString() descripcion: string;
+  @IsOptional() @IsInt() @Min(0) minutosDesdeSalida?: number;
+  @IsOptional() @IsInt() @Min(0) duracionEstimadaMinutos?: number;
   @IsOptional() @aplicar(EsLatitud()) latitud?: number;
   @IsOptional() @aplicar(EsLongitud()) longitud?: number;
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => MedioDto) medios?: MedioDto[];
 }
 class CrearEventoEspecialDto {
   @IsString() slug: string;
@@ -212,6 +215,8 @@ class DefinirParadasDto {
 class ItemItinerarioDto {
   @IsString() titulo: string;
   @IsString() descripcion: string;
+  @IsOptional() @IsInt() @Min(0) minutosDesdeSalida?: number;
+  @IsOptional() @IsInt() @Min(0) duracionEstimadaMinutos?: number;
   @IsOptional() @aplicar(EsLatitud()) latitud?: number;
   @IsOptional() @aplicar(EsLongitud()) longitud?: number;
   @IsOptional()
