@@ -6,7 +6,7 @@ import { PrismaService } from '../compartido/prisma/prisma.service';
 
 const imagenes = {
   colca: 'https://res.cloudinary.com/ddbzpbrje/image/upload/v1792781458/imagenes/tours/b0eb674d-3c6b-4ac3-bed3-464eb80b3faf.jpg',
-  arequipa: 'https://res.cloudinary.com/ddbzpbrje/image/upload/v1792781214/imagenes/tours/13adf9e4-78b8-46d2-bf46-4b18a286bd88.jpg',
+  arequipa: 'https://res.cloudinary.com/ddbzpbrje/image/upload/v1792781214/imagenes/tours/13adf9e4-78b8-46d2-bf46-bd60598b13f4.jpg',
   yura: 'https://res.cloudinary.com/ddbzpbrje/image/upload/v1792781555/imagenes/tours/463b9cda-9ed9-4056-b427-afaa5ff63138.jpg',
   cusco: 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Plaza_de_Armas_de_Cuzco.jpg',
 };
@@ -143,9 +143,24 @@ async function main() {
   const prisma = aplicacion.get(PrismaService);
   let creados = 0;
   let existentes = 0;
+  let portadasCorregidas = 0;
   try {
     for (const evento of eventos) {
-      if (await prisma.tour.findUnique({ where: { slug: evento.slug }, select: { id: true } })) {
+      const existente = await prisma.tour.findUnique({
+        where: { slug: evento.slug },
+        include: { imagenes: { orderBy: { orden: 'asc' } } },
+      });
+      if (existente) {
+        const portada = existente.imagenes[0];
+        const urlRota = 'https://res.cloudinary.com/ddbzpbrje/image/upload/v1792781214/imagenes/tours/13adf9e4-78b8-46d2-bf46-4b18a286bd88.jpg';
+        if (portada && portada.url === urlRota) {
+          await prisma.imagen.update({
+            where: { id: portada.id },
+            data: { url: evento.foto, textoAlterno: evento.titulo },
+          });
+          portadasCorregidas++;
+          process.stdout.write(`Portada corregida: ${evento.slug}\n`);
+        }
         existentes++;
         continue;
       }
@@ -159,7 +174,7 @@ async function main() {
       creados++;
       process.stdout.write(`Creado: ${datos.slug}\n`);
     }
-    process.stdout.write(`Resultado: ${creados} creados, ${existentes} ya existían.\n`);
+    process.stdout.write(`Resultado: ${creados} creados, ${existentes} ya existían, ${portadasCorregidas} portadas corregidas.\n`);
   } finally {
     await aplicacion.close();
   }
