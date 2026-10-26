@@ -15,7 +15,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Roles } from '../../autenticacion/presentacion/roles';
 import { UploadsService } from '../aplicacion/uploads.service';
 
-const TAMANO_MAXIMO_ARCHIVO = 25 * 1024 * 1024;
+const TAMANO_MAXIMO_ARCHIVO = 100 * 1024 * 1024;
 
 @Controller('administracion/uploads')
 @Roles('ADMINISTRADOR', 'OPERADOR')
@@ -23,7 +23,7 @@ export class UploadsController {
   constructor(private readonly servicio: UploadsService) {}
 
   @Post(':categoria')
-  @UseInterceptors(FileInterceptor('archivo'))
+  @UseInterceptors(FileInterceptor('archivo', { limits: { fileSize: TAMANO_MAXIMO_ARCHIVO } }))
   subir(
     @UploadedFile(
       new ParseFilePipe({
@@ -38,7 +38,7 @@ export class UploadsController {
     archivo: { buffer: Buffer; mimetype: string },
     @Param('categoria') categoria: string,
   ) {
-    if (!['transportes', 'tours', 'promociones', 'comprobantes'].includes(categoria)) {
+    if (!['transportes', 'tours', 'eventos', 'promociones', 'comprobantes'].includes(categoria)) {
       throw new BadRequestException('Categoría de archivo no válida');
     }
     return this.servicio.subir(archivo, categoria);
@@ -50,7 +50,7 @@ export class UploadsController {
     @Query('clave') clave: string,
     @Query('tipo') tipo: 'IMAGEN' | 'VIDEO',
   ) {
-    if (!['transportes', 'tours', 'promociones', 'comprobantes'].includes(categoria)) {
+    if (!['transportes', 'tours', 'eventos', 'promociones', 'comprobantes'].includes(categoria)) {
       throw new BadRequestException('Categoría de archivo no válida');
     }
     if (!clave || !['IMAGEN', 'VIDEO'].includes(tipo)) {

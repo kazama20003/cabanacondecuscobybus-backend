@@ -638,7 +638,7 @@ export class CatalogoService {
     });
 
     if (medios !== undefined) {
-      await this.reemplazarMedios('tour', id, medios, 'tours');
+      await this.reemplazarMedios('tour', id, medios, seraEvento ? 'eventos' : 'tours');
     }
     if (contenido) {
       await this.generarTraducciones('tour', id, contenido);
@@ -654,13 +654,13 @@ export class CatalogoService {
 
   /**
    * Reemplaza los medios de nivel principal (no toca los de paradas/itinerario).
-   * Borra los anteriores en Cloudinary salvo los que se conservan por clave.
+   * Borra del almacenamiento los medios que ya no se conservan por clave.
    */
   private async reemplazarMedios(
     tipo: 'transporte' | 'tour',
     id: string,
     medios: MedioEntrada[],
-    categoria: 'transportes' | 'tours',
+    categoria: 'transportes' | 'tours' | 'eventos',
   ) {
     const where = tipo === 'transporte' ? { transporteId: id } : { tourId: id };
     const anteriores = await this.prisma.imagen.findMany({
