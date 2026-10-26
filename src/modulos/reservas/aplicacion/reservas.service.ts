@@ -1,8 +1,11 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   EstadoPago,
   EstadoReserva,
@@ -32,7 +35,13 @@ export class ReservasService {
     private readonly izipay: IzipayService,
     private readonly promociones: PromocionesService,
     private readonly notificaciones: NotificacionesService,
+    private readonly configuracion: ConfigService,
   ) {}
+
+  private get minutosRetencionReserva() {
+    const valor = Number(this.configuracion.get('RESERVA_HOLD_MINUTOS', 20));
+    return Number.isFinite(valor) && valor >= 5 && valor <= 120 ? valor : 20;
+  }
 
   async crear(datos: {
     tipoServicio: 'TRANSPORTE' | 'TOUR';
@@ -44,12 +53,30 @@ export class ReservasService {
     pasajeros: Pasajero[];
     usuarioId?: string;
     codigoPromocion?: string;
+    aceptaPoliticas: boolean;
+    versionPoliticas: string;
   }) {
+    if (!datos.aceptaPoliticas)
+      throw new BadRequestException('Debes aceptar las políticas antes de reservar.');
+    const monedasHabilitadas = (this.configuracion.get('MONEDAS_HABILITADAS', 'PEN,USD') as string)
+      .split(',').map((moneda) => moneda.trim().toUpperCase());
+    if (!monedasHabilitadas.includes(datos.moneda))
+      throw new BadRequestException('La moneda elegida no está habilitada para reservas.');
+    const versionActual = this.configuracion.get('VERSION_POLITICAS', 'dev-sin-version');
+    if (datos.versionPoliticas !== versionActual)
+      throw new ConflictException('Las políticas cambiaron. Recarga la página y vuelve a aceptarlas.');
+    if (this.configuracion.get('ENTORNO') === 'produccion') {
+      const requeridas = ['URL_TERMINOS', 'URL_PRIVACIDAD', 'URL_CANCELACIONES', 'VERSION_POLITICAS'];
+      const faltantes = requeridas.filter((key) => !this.configuracion.get(key));
+      if (faltantes.length)
+        throw new ServiceUnavailableException(`Falta configurar: ${faltantes.join(', ')}`);
+    }
     if (!datos.pasajeros.length)
       throw new BadRequestException('Debe registrar al menos un pasajero');
 
     const reserva = await this.prisma.$transaction(
       async (tx) => {
+        const ahora = new Date();
         const salida =
           datos.tipoServicio === 'TRANSPORTE'
             ? await tx.salidaTransporte.findUnique({
@@ -63,6 +90,17 @@ export class ReservasService {
         ];
         if (!salida || !estadosDisponibles.includes(salida.estado))
           throw new NotFoundException('Salida no disponible');
+        const esEvento = datos.tipoServicio === 'TOUR' && !!(await tx.tour.findUnique({
+          where: { id: (salida as { tourId: string }).tourId },
+          select: { esEvento: true },
+        }))?.esEvento;
+        const claveCanales = esEvento ? 'CANALES_RESERVA_EVENTOS' : datos.tipoServicio === 'TOUR' ? 'CANALES_RESERVA_TOURS' : 'CANALES_RESERVA_TRANSPORTES';
+        const canalesHabilitados = (this.configuracion.get(claveCanales, this.configuracion.get('CANALES_RESERVA', 'ONLINE,WHATSAPP')) as string)
+          .split(',').map((canal) => canal.trim().toUpperCase());
+        if (!canalesHabilitados.includes('ONLINE'))
+          throw new ServiceUnavailableException('La reserva en línea no está habilitada para este servicio. Contacta a la agencia por WhatsApp.');
+        if (this.configuracion.get('IZIPAY_HABILITADO', 'true') !== 'true')
+          throw new ServiceUnavailableException('El pago en línea no está habilitado. Contacta a la agencia por WhatsApp.');
         // Valida el cupón contra la categoría y la entidad concreta de la salida.
         const promocion = datos.codigoPromocion
           ? await this.promociones.validarCupon(
@@ -77,6 +115,13 @@ export class ReservasService {
               ? { salidaTransporteId: datos.salidaId }
               : { salidaTourId: datos.salidaId }),
             estado: { notIn: [EstadoReserva.CANCELADA, EstadoReserva.VENCIDA] },
+            OR: [
+              { estado: { not: EstadoReserva.PENDIENTE_PAGO } },
+              {
+                estado: EstadoReserva.PENDIENTE_PAGO,
+                expiraEn: { gt: ahora },
+              },
+            ],
           },
           _sum: { cantidadPasajeros: true },
         });
@@ -120,6 +165,9 @@ export class ReservasService {
             montoSaldo: montoTotal.sub(montoAdelanto),
             promocionId: promocion?.id,
             montoDescuento,
+            expiraEn: new Date(ahora.getTime() + this.minutosRetencionReserva * 60_000),
+            aceptoPoliticasEn: ahora,
+            versionPoliticas: datos.versionPoliticas,
             tokenGestionInvitado: randomBytes(24).toString('hex'),
             pasajeros: { create: datos.pasajeros },
             historial: {
@@ -177,10 +225,16 @@ export class ReservasService {
   }
 
   async iniciarPagoAdelanto(codigo: string) {
+    if (this.configuracion.get('IZIPAY_HABILITADO', 'true') !== 'true')
+      throw new ServiceUnavailableException('El pago en línea no está habilitado. Contacta a la agencia para coordinar el pago.');
     const reserva = await this.prisma.reserva.findUnique({ where: { codigo } });
     if (!reserva) throw new NotFoundException('Reserva no encontrada');
     if (reserva.estado !== EstadoReserva.PENDIENTE_PAGO)
       throw new BadRequestException('La reserva ya no está pendiente de pago');
+    if (reserva.expiraEn && reserva.expiraEn <= new Date()) {
+      await this.marcarReservaVencida(reserva.id);
+      throw new ConflictException('El plazo para pagar esta reserva venció. Elige otra salida.');
+    }
 
     // Reutiliza el pago pendiente si el cliente reintenta (no duplica).
     let pago = await this.prisma.pago.findFirst({
@@ -235,6 +289,12 @@ export class ReservasService {
       where: { codigo, tokenGestionInvitado: token },
     });
     if (!reserva) throw new NotFoundException('Reserva no encontrada');
+    if (datos.metodo === MetodoPago.IZIPAY)
+      throw new BadRequestException('Los pagos Izipay se confirman únicamente mediante IPN firmado.');
+    if (reserva.estado === EstadoReserva.PENDIENTE_PAGO && reserva.expiraEn && reserva.expiraEn <= new Date()) {
+      await this.marcarReservaVencida(reserva.id);
+      throw new ConflictException('El plazo de reserva venció. No se puede registrar un pago para esta salida.');
+    }
     const estadosConSaldo: EstadoReserva[] = [
       EstadoReserva.SALDO_PENDIENTE,
       EstadoReserva.ADELANTO_PAGADO,
@@ -263,7 +323,13 @@ export class ReservasService {
         include: { reserva: true },
       });
       if (!pago) throw new NotFoundException('Pago no encontrado');
+      if (pago.metodo === MetodoPago.IZIPAY)
+        throw new BadRequestException('Izipay solo puede confirmarse con su notificación IPN firmada.');
       if (pago.estado === EstadoPago.APROBADO) return pago;
+      if (pago.reserva.estado === EstadoReserva.CANCELADA || pago.reserva.estado === EstadoReserva.VENCIDA)
+        throw new ConflictException('No se puede confirmar un pago de una reserva vencida o cancelada.');
+      if (pago.estado !== EstadoPago.PENDIENTE)
+        throw new ConflictException('El comprobante ya no está pendiente de revisión.');
       await tx.pago.update({
         where: { id: pagoId },
         data: {
@@ -286,6 +352,16 @@ export class ReservasService {
           },
         },
       });
+      await tx.auditoria.create({
+        data: {
+          usuarioId: administradorId,
+          accion: 'CONFIRMAR_PAGO_MANUAL',
+          entidad: 'PAGO',
+          entidadId: pagoId,
+          descripcion: `Comprobante ${pago.metodo} revisado y confirmado para la reserva ${pago.reserva.codigo}`,
+          detalle: { monto: pago.monto.toString(), moneda: pago.moneda, codigoOperacion: pago.codigoOperacion },
+        },
+      });
       return { ...pago, estado: EstadoPago.APROBADO };
     });
     if (pagoFueConfirmado) {
@@ -295,6 +371,68 @@ export class ReservasService {
       if (reserva) void this.notificaciones.pagoAprobado(reserva);
     }
     return pago;
+  }
+
+  async marcarReservaVencida(reservaId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const resultado = await tx.reserva.updateMany({
+        where: {
+          id: reservaId,
+          estado: EstadoReserva.PENDIENTE_PAGO,
+          expiraEn: { lte: new Date() },
+        },
+        data: { estado: EstadoReserva.VENCIDA },
+      });
+      if (resultado.count) {
+        await tx.historialReserva.create({
+          data: {
+            reservaId,
+            estado: EstadoReserva.VENCIDA,
+            detalle: 'Reserva vencida por falta de pago dentro del plazo',
+          },
+        });
+      }
+      return resultado.count > 0;
+    });
+  }
+
+  async solicitarGestionReserva(
+    codigo: string,
+    token: string | undefined,
+    usuarioId: string | undefined,
+    solicitud: { tipo: 'CANCELACION' | 'REPROGRAMACION'; motivo: string; fechaPreferida?: string },
+  ) {
+    const credenciales: Prisma.ReservaWhereInput[] = [];
+    if (token) credenciales.push({ tokenGestionInvitado: token });
+    if (usuarioId) credenciales.push({ usuarioId });
+    if (!credenciales.length) throw new BadRequestException('Debes iniciar sesión o usar el enlace seguro de tu reserva.');
+    const reserva = await this.prisma.reserva.findFirst({
+      where: { codigo, OR: credenciales },
+    });
+    if (!reserva) throw new NotFoundException('Reserva no encontrada');
+    if (reserva.estado === EstadoReserva.CANCELADA || reserva.estado === EstadoReserva.COMPLETADA || reserva.estado === EstadoReserva.VENCIDA)
+      throw new ConflictException('Esta reserva ya no admite solicitudes de cambio. Contacta con la agencia.');
+    const motivo = solicitud.motivo.trim();
+    if (!motivo) throw new BadRequestException('Indica el motivo de la solicitud.');
+    if (solicitud.fechaPreferida && (!Number.isFinite(Date.parse(solicitud.fechaPreferida)) || new Date(solicitud.fechaPreferida) <= new Date()))
+      throw new BadRequestException('La fecha preferida debe ser futura.');
+    const accion = solicitud.tipo === 'CANCELACION' ? 'SOLICITUD_CANCELACION' : 'SOLICITUD_REPROGRAMACION';
+    await this.prisma.auditoria.create({
+      data: {
+        usuarioId,
+        accion,
+        entidad: 'RESERVA',
+        entidadId: reserva.id,
+        descripcion: `${solicitud.tipo === 'CANCELACION' ? 'Cancelación' : 'Reprogramación'} solicitada para la reserva ${codigo}; pendiente de revisión administrativa`,
+        detalle: {
+          motivo,
+          fechaPreferida: solicitud.fechaPreferida ?? null,
+          estadoReservaAlSolicitar: reserva.estado,
+        },
+      },
+    });
+    void this.notificaciones.solicitudGestionReserva(reserva, solicitud.tipo, motivo, solicitud.fechaPreferida);
+    return { recibida: true, mensaje: 'Solicitud recibida y enviada a administración. La reserva conserva su estado hasta la revisión.' };
   }
 
   async listarPagosAdministracion(filtros: {

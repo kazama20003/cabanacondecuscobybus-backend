@@ -81,20 +81,20 @@ enum EstadoTraduccion {
 }
 
 model Usuario {
-  id               String     @id @default(uuid()) @db.Uuid
-  correo           String     @unique
-  contrasenaHash   String?    @map("contrasena_hash")
-  googleId         String?    @unique @map("google_id")
+  id               String      @id @default(uuid()) @db.Uuid
+  correo           String      @unique
+  contrasenaHash   String?     @map("contrasena_hash")
+  googleId         String?     @unique @map("google_id")
   nombres          String
   apellidos        String
-  telefonoWhatsApp String?    @map("telefono_whatsapp")
-  paisResidencia   String?    @map("pais_residencia")
-  rol              RolUsuario @default(CLIENTE)
-  activo           Boolean    @default(true)
-  creadoEn         DateTime   @default(now()) @map("creado_en")
-  actualizadoEn    DateTime   @updatedAt @map("actualizado_en")
+  telefonoWhatsApp String?     @map("telefono_whatsapp")
+  paisResidencia   String?     @map("pais_residencia")
+  rol              RolUsuario  @default(CLIENTE)
+  activo           Boolean     @default(true)
+  creadoEn         DateTime    @default(now()) @map("creado_en")
+  actualizadoEn    DateTime    @updatedAt @map("actualizado_en")
   reservas         Reserva[]
-  pagosConfirmados Pago[]     @relation("pagos_confirmados_por")
+  pagosConfirmados Pago[]      @relation("pagos_confirmados_por")
   auditorias       Auditoria[]
 
   @@map("usuarios")
@@ -143,83 +143,83 @@ model ParadaTransporte {
 }
 
 model Tour {
-  id              String           @id @default(uuid()) @db.Uuid
-  slug            String           @unique
-  activo          Boolean          @default(true)
-  destinoNombre   String           @map("destino_nombre")
-  destinoLatitud  Decimal          @map("destino_latitud") @db.Decimal(10, 7)
-  destinoLongitud Decimal          @map("destino_longitud") @db.Decimal(10, 7)
-  duracionMinutos Int              @map("duracion_minutos")
-  requiereGuia    Boolean          @default(true) @map("requiere_guia")
+  id               String            @id @default(uuid()) @db.Uuid
+  slug             String            @unique
+  activo           Boolean           @default(true)
+  destinoNombre    String            @map("destino_nombre")
+  destinoLatitud   Decimal           @map("destino_latitud") @db.Decimal(10, 7)
+  destinoLongitud  Decimal           @map("destino_longitud") @db.Decimal(10, 7)
+  duracionMinutos  Int               @map("duracion_minutos")
+  requiereGuia     Boolean           @default(true) @map("requiere_guia")
   /// Marca el tour como evento estacional (fiesta, feria, temporada de cóndores…).
-  esEvento        Boolean          @default(false) @map("es_evento")
+  esEvento         Boolean           @default(false) @map("es_evento")
   /// Ventana de temporada del evento (solo fecha). Null = sin ventana definida.
-  temporadaInicio DateTime?        @map("temporada_inicio") @db.Date
-  temporadaFin    DateTime?        @map("temporada_fin") @db.Date
-  creadoEn        DateTime         @default(now()) @map("creado_en")
-  actualizadoEn   DateTime         @updatedAt @map("actualizado_en")
+  temporadaInicio  DateTime?         @map("temporada_inicio") @db.Date
+  temporadaFin     DateTime?         @map("temporada_fin") @db.Date
+  creadoEn         DateTime          @default(now()) @map("creado_en")
+  actualizadoEn    DateTime          @updatedAt @map("actualizado_en")
   itinerarios      ItinerarioTour[]
   salidas          SalidaTour[]
   plantillasSalida PlantillaSalida[]
-  traducciones    TraduccionTour[]
-  imagenes        Imagen[]
-  promociones     Promocion[]
+  traducciones     TraduccionTour[]
+  imagenes         Imagen[]
+  promociones      Promocion[]
 
   @@index([esEvento])
   @@map("tours")
 }
 
 model ItinerarioTour {
-  id          String   @id @default(uuid()) @db.Uuid
-  tourId      String   @map("tour_id") @db.Uuid
-  orden       Int
-  titulo      String
-  descripcion String
-  minutosDesdeSalida     Int?     @map("minutos_desde_salida")
+  id                      String   @id @default(uuid()) @db.Uuid
+  tourId                  String   @map("tour_id") @db.Uuid
+  orden                   Int
+  titulo                  String
+  descripcion             String
+  minutosDesdeSalida      Int?     @map("minutos_desde_salida")
   duracionEstimadaMinutos Int?     @map("duracion_estimada_minutos")
-  tituloI18n      Json?    @map("titulo_i18n")
-  descripcionI18n Json?    @map("descripcion_i18n")
-  latitud     Decimal? @db.Decimal(10, 7)
-  longitud    Decimal? @db.Decimal(10, 7)
-  tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
-  imagenes    Imagen[]
+  tituloI18n              Json?    @map("titulo_i18n")
+  descripcionI18n         Json?    @map("descripcion_i18n")
+  latitud                 Decimal? @db.Decimal(10, 7)
+  longitud                Decimal? @db.Decimal(10, 7)
+  tour                    Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  imagenes                Imagen[]
 
   @@unique([tourId, orden])
   @@map("itinerarios_tour")
 }
 
 model Vehiculo {
-  id            String             @id @default(uuid()) @db.Uuid
-  placa         String             @unique
-  tipoPropiedad TipoVehiculo       @map("tipo_propiedad")
-  proveedor     String?
-  capacidad     Int
-  activo        Boolean            @default(true)
-  creadoEn      DateTime           @default(now()) @map("creado_en")
-  salidas       SalidaTransporte[]
+  id               String             @id @default(uuid()) @db.Uuid
+  placa            String             @unique
+  tipoPropiedad    TipoVehiculo       @map("tipo_propiedad")
+  proveedor        String?
+  capacidad        Int
+  activo           Boolean            @default(true)
+  creadoEn         DateTime           @default(now()) @map("creado_en")
+  salidas          SalidaTransporte[]
   plantillasSalida PlantillaSalida[]
 
   @@map("vehiculos")
 }
 
 model SalidaTransporte {
-  id                 String       @id @default(uuid()) @db.Uuid
-  transporteId       String       @map("transporte_id") @db.Uuid
-  vehiculoId         String?      @map("vehiculo_id") @db.Uuid
-  plantillaId        String?      @map("plantilla_id") @db.Uuid
-  fechaHoraSalida    DateTime     @map("fecha_hora_salida")
-  fechaHoraLlegada   DateTime?    @map("fecha_hora_llegada")
+  id                 String           @id @default(uuid()) @db.Uuid
+  transporteId       String           @map("transporte_id") @db.Uuid
+  vehiculoId         String?          @map("vehiculo_id") @db.Uuid
+  plantillaId        String?          @map("plantilla_id") @db.Uuid
+  fechaHoraSalida    DateTime         @map("fecha_hora_salida")
+  fechaHoraLlegada   DateTime?        @map("fecha_hora_llegada")
   capacidad          Int
-  minimoPasajeros    Int          @default(2) @map("minimo_pasajeros")
-  precioPen          Decimal      @map("precio_pen") @db.Decimal(10, 2)
-  precioUsd          Decimal      @map("precio_usd") @db.Decimal(10, 2)
-  permiteAdelanto    Boolean      @default(true) @map("permite_adelanto")
-  porcentajeAdelanto Int          @default(50) @map("porcentaje_adelanto")
-  estado             EstadoSalida @default(BORRADOR)
-  creadoEn           DateTime     @default(now()) @map("creado_en")
-  actualizadoEn      DateTime     @updatedAt @map("actualizado_en")
-  transporte         Transporte   @relation(fields: [transporteId], references: [id], onDelete: Restrict)
-  vehiculo           Vehiculo?    @relation(fields: [vehiculoId], references: [id], onDelete: SetNull)
+  minimoPasajeros    Int              @default(2) @map("minimo_pasajeros")
+  precioPen          Decimal          @map("precio_pen") @db.Decimal(10, 2)
+  precioUsd          Decimal          @map("precio_usd") @db.Decimal(10, 2)
+  permiteAdelanto    Boolean          @default(true) @map("permite_adelanto")
+  porcentajeAdelanto Int              @default(50) @map("porcentaje_adelanto")
+  estado             EstadoSalida     @default(BORRADOR)
+  creadoEn           DateTime         @default(now()) @map("creado_en")
+  actualizadoEn      DateTime         @updatedAt @map("actualizado_en")
+  transporte         Transporte       @relation(fields: [transporteId], references: [id], onDelete: Restrict)
+  vehiculo           Vehiculo?        @relation(fields: [vehiculoId], references: [id], onDelete: SetNull)
   plantilla          PlantillaSalida? @relation(fields: [plantillaId], references: [id], onDelete: SetNull)
   reservas           Reserva[]
 
@@ -229,20 +229,20 @@ model SalidaTransporte {
 }
 
 model SalidaTour {
-  id                 String       @id @default(uuid()) @db.Uuid
-  tourId             String       @map("tour_id") @db.Uuid
-  plantillaId        String?      @map("plantilla_id") @db.Uuid
-  fechaHoraSalida    DateTime     @map("fecha_hora_salida")
+  id                 String           @id @default(uuid()) @db.Uuid
+  tourId             String           @map("tour_id") @db.Uuid
+  plantillaId        String?          @map("plantilla_id") @db.Uuid
+  fechaHoraSalida    DateTime         @map("fecha_hora_salida")
   capacidad          Int
-  minimoPasajeros    Int          @default(1) @map("minimo_pasajeros")
-  precioPen          Decimal      @map("precio_pen") @db.Decimal(10, 2)
-  precioUsd          Decimal      @map("precio_usd") @db.Decimal(10, 2)
-  permiteAdelanto    Boolean      @default(true) @map("permite_adelanto")
-  porcentajeAdelanto Int          @default(50) @map("porcentaje_adelanto")
-  estado             EstadoSalida @default(BORRADOR)
-  creadoEn           DateTime     @default(now()) @map("creado_en")
-  actualizadoEn      DateTime     @updatedAt @map("actualizado_en")
-  tour               Tour         @relation(fields: [tourId], references: [id], onDelete: Restrict)
+  minimoPasajeros    Int              @default(1) @map("minimo_pasajeros")
+  precioPen          Decimal          @map("precio_pen") @db.Decimal(10, 2)
+  precioUsd          Decimal          @map("precio_usd") @db.Decimal(10, 2)
+  permiteAdelanto    Boolean          @default(true) @map("permite_adelanto")
+  porcentajeAdelanto Int              @default(50) @map("porcentaje_adelanto")
+  estado             EstadoSalida     @default(BORRADOR)
+  creadoEn           DateTime         @default(now()) @map("creado_en")
+  actualizadoEn      DateTime         @updatedAt @map("actualizado_en")
+  tour               Tour             @relation(fields: [tourId], references: [id], onDelete: Restrict)
   plantilla          PlantillaSalida? @relation(fields: [plantillaId], references: [id], onDelete: SetNull)
   reservas           Reserva[]
 
@@ -251,8 +251,7 @@ model SalidaTour {
   @@map("salidas_tour")
 }
 
-/// Registro de acciones del panel de administración. Retención: 30 días
-/// (limpieza diaria por cron), suficiente para revisar el mes en curso.
+/// Registro de acciones del panel de administración. La retención la configura el negocio.
 model Auditoria {
   id          String   @id @default(uuid()) @db.Uuid
   usuarioId   String?  @map("usuario_id") @db.Uuid
@@ -320,6 +319,9 @@ model Reserva {
   promocionId          String?            @map("promocion_id") @db.Uuid
   montoDescuento       Decimal            @default(0) @map("monto_descuento") @db.Decimal(10, 2)
   estado               EstadoReserva      @default(PENDIENTE_PAGO)
+  expiraEn             DateTime?          @map("expira_en")
+  aceptoPoliticasEn    DateTime?          @map("acepto_politicas_en")
+  versionPoliticas     String?            @map("version_politicas")
   tokenGestionInvitado String             @unique @map("token_gestion_invitado")
   creadoEn             DateTime           @default(now()) @map("creado_en")
   actualizadoEn        DateTime           @updatedAt @map("actualizado_en")

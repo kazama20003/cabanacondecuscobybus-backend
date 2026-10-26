@@ -9,6 +9,7 @@ type ReservaCorreo = {
   moneda: string;
   montoTotal: { toString(): string };
   montoAdelanto: { toString(): string };
+  expiraEn?: Date | null;
 };
 
 @Injectable()
@@ -19,16 +20,19 @@ export class NotificacionesService {
 
   async reservaCreada(reserva: ReservaCorreo) {
     const monto = `${reserva.moneda} ${reserva.montoTotal.toString()}`;
+    const vencimiento = reserva.expiraEn
+      ? ` La reserva retiene los asientos hasta ${reserva.expiraEn.toLocaleString('es-PE', { timeZone: 'America/Lima' })}; completa el pago antes de ese momento.`
+      : '';
     await Promise.all([
       this.enviar({
         para: reserva.correoContacto,
         asunto: `Recibimos tu reserva ${reserva.codigo}`,
-        texto: `Tu reserva ${reserva.codigo} fue recibida para ${reserva.cantidadPasajeros} pasajero(s). Total: ${monto}. Adelanto a pagar: ${reserva.moneda} ${reserva.montoAdelanto.toString()}.`,
+        texto: `Tu reserva ${reserva.codigo} fue recibida para ${reserva.cantidadPasajeros} pasajero(s). Total: ${monto}. Adelanto a pagar: ${reserva.moneda} ${reserva.montoAdelanto.toString()}.${vencimiento}`,
       }),
       this.enviar({
         para: this.configuracion.get<string>('CORREO_ADMINISTRADOR'),
         asunto: `Nueva reserva ${reserva.codigo}`,
-        texto: `Nueva reserva ${reserva.codigo}: ${reserva.cantidadPasajeros} pasajero(s), total ${monto}. Contacto: ${reserva.correoContacto}.`,
+        texto: `Nueva reserva ${reserva.codigo}: ${reserva.cantidadPasajeros} pasajero(s), total ${monto}. Contacto: ${reserva.correoContacto}.${vencimiento}`,
       }),
     ]);
   }
@@ -46,6 +50,27 @@ export class NotificacionesService {
       para: this.configuracion.get<string>('CORREO_ADMINISTRADOR'),
       asunto: `Comprobante pendiente de revisión: ${reserva.codigo}`,
       texto: `La reserva ${reserva.codigo} registró un comprobante de saldo. Revísalo desde el panel administrativo.`,
+    });
+  }
+
+  async pagoIzipayTardio(reserva: ReservaCorreo) {
+    await this.enviar({
+      para: this.configuracion.get<string>('CORREO_ADMINISTRADOR'),
+      asunto: `Acción requerida: Izipay cobró la reserva vencida ${reserva.codigo}`,
+      texto: `Izipay confirmó un cobro para la reserva ${reserva.codigo}, pero su estado ya no permite confirmar automáticamente el asiento. Revisa la disponibilidad y aplica la política de reembolso o reprogramación vigente. No se envió una confirmación de reserva al cliente.`,
+    });
+  }
+
+  async solicitudGestionReserva(
+    reserva: ReservaCorreo,
+    tipo: 'CANCELACION' | 'REPROGRAMACION',
+    motivo: string,
+    fechaPreferida?: string,
+  ) {
+    await this.enviar({
+      para: this.configuracion.get<string>('CORREO_ADMINISTRADOR'),
+      asunto: `Solicitud de ${tipo.toLowerCase()} para la reserva ${reserva.codigo}`,
+      texto: `La reserva ${reserva.codigo} tiene una solicitud pendiente de revisión. Motivo: ${motivo}.${fechaPreferida ? ` Fecha preferida: ${fechaPreferida}.` : ''} Revisa el registro de auditoría y responde al cliente según la política publicada. La reserva no se ha cancelado ni reprogramado automáticamente.`,
     });
   }
 

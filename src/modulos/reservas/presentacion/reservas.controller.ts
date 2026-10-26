@@ -12,10 +12,13 @@ import { Type } from 'class-transformer';
 import {
   IsInt,
   IsArray,
+  IsBoolean,
+  IsDateString,
   IsEmail,
   IsEnum,
   IsOptional,
   IsString,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 import { EstadoPago, MetodoPago, Moneda } from '@prisma/client';
@@ -43,11 +46,18 @@ class CrearReservaDto {
   @Type(() => PasajeroDto)
   pasajeros: PasajeroDto[];
   @IsOptional() @IsString() codigoPromocion?: string;
+  @IsBoolean() aceptaPoliticas: boolean;
+  @IsString() versionPoliticas: string;
 }
 class ComprobanteSaldoDto {
   @IsString() codigoOperacion: string;
   @IsString() urlComprobante: string;
   @IsEnum(MetodoPago) metodo: MetodoPago;
+}
+class SolicitudGestionReservaDto {
+  @IsEnum(['CANCELACION', 'REPROGRAMACION']) tipo: 'CANCELACION' | 'REPROGRAMACION';
+  @IsString() @MaxLength(1000) motivo: string;
+  @IsOptional() @IsDateString() fechaPreferida?: string;
 }
 class FiltrosPagosAdminDto {
   @IsOptional() @Type(() => Number) @IsInt() pagina?: number;
@@ -111,6 +121,21 @@ export class ReservasController {
     @Body() datos: ComprobanteSaldoDto,
   ) {
     return this.servicio.registrarComprobanteSaldo(codigo, token, datos);
+  }
+  @Post(':codigo/solicitudes-gestion') solicitarGestion(
+    @Param('codigo') codigo: string,
+    @Query('token') token: string,
+    @Body() datos: SolicitudGestionReservaDto,
+    @Req() solicitud: { headers: Record<string, string>; usuario?: { id: string } },
+  ) {
+    try {
+      this.guardiaJwt.canActivate({
+        switchToHttp: () => ({ getRequest: () => solicitud }),
+      } as Parameters<GuardiaJwt['canActivate']>[0]);
+    } catch {
+      // Las reservas invitadas pueden usar el token de gestión.
+    }
+    return this.servicio.solicitarGestionReserva(codigo, token, solicitud.usuario?.id, datos);
   }
   @Get('administracion/pagos')
   @UseGuards(GuardiaAdministrador)
