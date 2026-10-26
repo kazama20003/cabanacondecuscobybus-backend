@@ -22,6 +22,7 @@
     "catalogo:completar-tiempos": "ts-node -r tsconfig-paths/register src/scripts/completar-tiempos-itinerario.ts"
   },
   "dependencies": {
+    "@google-cloud/storage": "^8.4.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
