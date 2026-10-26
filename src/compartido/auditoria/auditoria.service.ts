@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import {
@@ -8,12 +9,18 @@ import {
 } from '../paginacion';
 import { PrismaService } from '../prisma/prisma.service';
 
-/** Días que se conserva el historial antes de purgarlo. */
-const DIAS_RETENCION = 30;
-
 export interface EventoAuditoria {
   usuarioId?: string;
-  accion: 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'DESACTIVAR' | 'CONFIRMAR';
+  accion:
+    | 'CREAR'
+    | 'ACTUALIZAR'
+    | 'ELIMINAR'
+    | 'DESACTIVAR'
+    | 'CONFIRMAR'
+    | 'CONFIRMAR_PAGO_MANUAL'
+    | 'IPN_PAGO_RESERVA_NO_VIGENTE'
+    | 'SOLICITUD_CANCELACION'
+    | 'SOLICITUD_REPROGRAMACION';
   entidad:
     | 'TRANSPORTE'
     | 'TOUR'
@@ -21,7 +28,8 @@ export interface EventoAuditoria {
     | 'PLANTILLA_SALIDA'
     | 'PROMOCION'
     | 'USUARIO'
-    | 'PAGO';
+    | 'PAGO'
+    | 'RESERVA';
   entidadId?: string;
   descripcion: string;
   detalle?: Record<string, unknown>;
@@ -31,7 +39,10 @@ export interface EventoAuditoria {
 export class AuditoriaService {
   private readonly logger = new Logger(AuditoriaService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
 
   /** Nunca rompe la operación auditada: los fallos solo se loguean. */
   async registrar(evento: EventoAuditoria): Promise<void> {
@@ -72,16 +83,21 @@ export class AuditoriaService {
     return construirPaginado(datos, total, pagina, porPagina);
   }
 
-  /** Purga el historial con más de 30 días — se conserva ~1 mes de registro. */
+  /** Retención de auditoría configurable según la política aprobada por el negocio. */
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async purgarAntiguos() {
+    const diasRetencion = Number(this.config.get('RETENCION_AUDITORIA_DIAS', 30));
+    if (!Number.isFinite(diasRetencion) || diasRetencion < 1 || diasRetencion > 3650) {
+      this.logger.error('RETENCION_AUDITORIA_DIAS debe estar entre 1 y 3650; no se borró auditoría.');
+      return;
+    }
     const limite = new Date();
-    limite.setDate(limite.getDate() - DIAS_RETENCION);
+    limite.setDate(limite.getDate() - diasRetencion);
     const { count } = await this.prisma.auditoria.deleteMany({
       where: { creadoEn: { lt: limite } },
     });
     if (count > 0) {
-      this.logger.log(`Auditoría purgada: ${count} registros de más de ${DIAS_RETENCION} días`);
+      this.logger.log(`Auditoría purgada: ${count} registros de más de ${diasRetencion} días`);
     }
   }
 }

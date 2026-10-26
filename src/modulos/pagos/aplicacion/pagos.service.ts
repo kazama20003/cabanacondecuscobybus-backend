@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EstadoPago, EstadoReserva } from '@prisma/client';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
 import { NotificacionesService } from '../../../compartido/notificaciones/notificaciones.service';
@@ -24,6 +24,7 @@ export class PagosService {
       include: { reserva: true },
     });
     if (!pago) throw new NotFoundException(`Pago ${pagoId} no existe`);
+    if (pago.metodo !== 'IZIPAY') throw new BadRequestException('La orden IPN no corresponde a un pago Izipay.');
     if (pago.estado === EstadoPago.APROBADO) {
       return { mensaje: 'Pago ya estaba aprobado' };
     }
@@ -31,6 +32,38 @@ export class PagosService {
     const referencia = answer.transactions?.[0]?.uuid;
 
     if (answer.orderStatus === 'PAID') {
+      if (pago.reserva.estado === EstadoReserva.VENCIDA || pago.reserva.estado === EstadoReserva.CANCELADA) {
+        const referenciaTardia = answer.transactions?.[0]?.uuid;
+        await this.prisma.$transaction(async (tx) => {
+          await tx.pago.update({
+            where: { id: pago.id },
+            data: {
+              estado: EstadoPago.APROBADO,
+              referenciaProveedor: referenciaTardia,
+              confirmadoEn: new Date(),
+            },
+          });
+          await tx.auditoria.create({
+            data: {
+              accion: 'IPN_PAGO_RESERVA_NO_VIGENTE',
+              entidad: 'PAGO',
+              entidadId: pago.id,
+              descripcion: `Izipay cobró una reserva ${pago.reserva.estado}; requiere resolución manual`,
+              detalle: { codigoReserva: pago.reserva.codigo, referenciaProveedor: referenciaTardia ?? null },
+            },
+          });
+          await tx.historialReserva.create({
+            data: {
+              reservaId: pago.reservaId,
+              estado: pago.reserva.estado,
+              detalle: 'Izipay notificó un cobro después de vencer o cancelar la reserva; requiere gestión administrativa',
+            },
+          });
+        });
+        void this.notificaciones.pagoIzipayTardio(pago.reserva);
+        this.logger.error(`Pago Izipay ${pago.id} recibido para reserva ${pago.reserva.estado}; revisión administrativa requerida`);
+        return { mensaje: 'Pago recibido; la reserva requiere resolución administrativa' };
+      }
       const estadoReserva =
         pago.esAdelanto && pago.reserva.montoSaldo.gt(0)
           ? EstadoReserva.ADELANTO_PAGADO

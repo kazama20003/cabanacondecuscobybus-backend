@@ -10,6 +10,7 @@ import { UsuariosModule } from './modulos/usuarios/usuarios.module';
 import { AuditoriaModule } from './compartido/auditoria/auditoria.module';
 import { LimpiezaModule } from './compartido/limpieza/limpieza.module';
 import { PrismaModule } from './compartido/prisma/prisma.module';
+import { OperacionController } from './compartido/operacion/operacion.controller';
 
 @Module({
   imports: [
@@ -25,5 +26,6 @@ import { PrismaModule } from './compartido/prisma/prisma.module';
     ReservasModule,
     UsuariosModule,
   ],
+  controllers: [OperacionController],
 })
 export class AppModule {}

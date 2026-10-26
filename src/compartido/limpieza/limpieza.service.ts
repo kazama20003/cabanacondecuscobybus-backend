@@ -48,4 +48,48 @@ export class LimpiezaService {
       );
     }
   }
+
+  /** Libera cupos de reservas sin pago al cumplirse el plazo de retención. */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async vencerReservasPendientes() {
+    const ahora = new Date();
+    const vencidas = await this.prisma.reserva.findMany({
+      where: {
+        estado: EstadoReserva.PENDIENTE_PAGO,
+        expiraEn: { lte: ahora },
+      },
+      select: { id: true },
+      take: 200,
+    });
+    if (!vencidas.length) return;
+
+    const ids = vencidas.map(({ id }) => id);
+    const resultado = await this.prisma.$transaction(async (tx) => {
+      const actualizadas = await tx.reserva.updateMany({
+        where: {
+          id: { in: ids },
+          estado: EstadoReserva.PENDIENTE_PAGO,
+          expiraEn: { lte: ahora },
+        },
+        data: { estado: EstadoReserva.VENCIDA },
+      });
+      if (actualizadas.count) {
+        const confirmadas = await tx.reserva.findMany({
+          where: { id: { in: ids }, estado: EstadoReserva.VENCIDA, actualizadoEn: { gte: ahora } },
+          select: { id: true },
+        });
+        if (confirmadas.length) {
+          await tx.historialReserva.createMany({
+            data: confirmadas.map(({ id }) => ({
+              reservaId: id,
+              estado: EstadoReserva.VENCIDA,
+              detalle: 'Reserva vencida por falta de pago dentro del plazo',
+            })),
+          });
+        }
+      }
+      return actualizadas.count;
+    });
+    if (resultado) this.logger.log(`${resultado} reservas pendientes vencidas; cupos liberados`);
+  }
 }

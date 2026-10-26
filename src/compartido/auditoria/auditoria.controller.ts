@@ -14,6 +14,7 @@ class FiltrosAuditoriaDto extends PaginacionDto {
     'PROMOCION',
     'USUARIO',
     'PAGO',
+    'RESERVA',
   ])
   entidad?: string;
 }
