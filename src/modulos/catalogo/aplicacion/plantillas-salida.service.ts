@@ -21,7 +21,7 @@ export interface CrearPlantillaEntrada {
   diasSemana: number[];
   fechaDesde: string;
   fechaHasta?: string;
-  capacidad: number;
+  capacidad?: number | null;
   minimoPasajeros?: number;
   precioPen: number;
   precioUsd: number;
@@ -35,7 +35,7 @@ export interface ActualizarPlantillaEntrada {
   diasSemana?: number[];
   fechaDesde?: string;
   fechaHasta?: string | null;
-  capacidad?: number;
+  capacidad?: number | null;
   minimoPasajeros?: number;
   precioPen?: number;
   precioUsd?: number;
@@ -108,7 +108,7 @@ export class PlantillasSalidaService {
         fechaHasta: datos.fechaHasta
           ? new Date(`${datos.fechaHasta}T00:00:00${OFFSET_LIMA}`)
           : null,
-        capacidad: datos.capacidad,
+        capacidad: datos.capacidad ?? null,
         minimoPasajeros: datos.minimoPasajeros ?? (datos.transporteId ? 2 : 1),
         precioPen: new Prisma.Decimal(datos.precioPen),
         precioUsd: new Prisma.Decimal(datos.precioUsd),

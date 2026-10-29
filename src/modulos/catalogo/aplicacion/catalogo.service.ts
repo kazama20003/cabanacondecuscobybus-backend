@@ -16,7 +16,7 @@ interface ParadaEntrada {
   nombre: string;
   latitud: number;
   longitud: number;
-  minutos: number;
+  minutos?: number;
   duracionParadaMinutos?: number;
   descripcion?: string;
   medios?: MedioEntrada[];
@@ -314,7 +314,7 @@ export class CatalogoService {
             EstadoSalida.CONFIRMADA,
           ],
         },
-        capacidad: { gte: pasajeros },
+        OR: [{ capacidad: null }, { capacidad: { gte: pasajeros } }],
         transporte: {
           origenNombre: { contains: origen, mode: 'insensitive' },
           destinoNombre: { contains: destino, mode: 'insensitive' },
@@ -1296,7 +1296,7 @@ export class CatalogoService {
       nombre: string;
       latitud: number;
       longitud: number;
-      minutos: number;
+      minutos?: number;
       duracionParadaMinutos?: number;
       descripcion?: string;
       medios?: MedioEntrada[];
@@ -1308,17 +1308,17 @@ export class CatalogoService {
     if (!transporte) throw new NotFoundException('Transporte no encontrado');
     let ultimoMinuto = -1;
     for (const [indice, parada] of paradas.entries()) {
-      if (parada.minutos < ultimoMinuto) {
+      if (parada.minutos !== undefined && parada.minutos < ultimoMinuto) {
         throw new BadRequestException(
           `El punto ${indice + 1} debe aparecer después del punto anterior`,
         );
       }
-      if (parada.minutos + (parada.duracionParadaMinutos ?? 0) > transporte.duracionMinutosEstimada) {
+      if (parada.minutos !== undefined && parada.minutos + (parada.duracionParadaMinutos ?? 0) > transporte.duracionMinutosEstimada) {
         throw new BadRequestException(
           `El tiempo del punto ${indice + 1} supera la duración estimada del trayecto`,
         );
       }
-      ultimoMinuto = parada.minutos;
+      if (parada.minutos !== undefined) ultimoMinuto = parada.minutos;
     }
     const imagenesAnteriores = await this.prisma.imagen.findMany({
       where: { paradaTransporte: { transporteId } },
@@ -1394,7 +1394,7 @@ export class CatalogoService {
   async crearSalidaTransporte(datos: {
     transporteId: string;
     fechaHoraSalida: Date;
-    capacidad: number;
+    capacidad?: number | null;
     minimoPasajeros?: number;
     precioPen: number;
     precioUsd: number;
@@ -1411,6 +1411,7 @@ export class CatalogoService {
     return this.prisma.salidaTransporte.create({
       data: {
         ...datos,
+        capacidad: datos.capacidad ?? null,
         minimoPasajeros: datos.minimoPasajeros ?? 2,
         precioPen: new Prisma.Decimal(datos.precioPen),
         precioUsd: new Prisma.Decimal(datos.precioUsd),
@@ -1422,7 +1423,7 @@ export class CatalogoService {
   async crearSalidaTour(datos: {
     tourId: string;
     fechaHoraSalida: Date;
-    capacidad: number;
+    capacidad?: number | null;
     minimoPasajeros?: number;
     precioPen: number;
     precioUsd: number;
@@ -1439,6 +1440,7 @@ export class CatalogoService {
     return this.prisma.salidaTour.create({
       data: {
         ...datos,
+        capacidad: datos.capacidad ?? null,
         minimoPasajeros: datos.minimoPasajeros ?? 1,
         precioPen: new Prisma.Decimal(datos.precioPen),
         precioUsd: new Prisma.Decimal(datos.precioUsd),
