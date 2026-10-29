@@ -849,13 +849,15 @@ export class CatalogoService {
 
   /** Listado de salidas para el panel, paginado y con ocupación. */
   async listarSalidasAdmin(
-    paginacion: PaginacionDto,
+    paginacion: PaginacionDto & { servicioId?: string },
     tipo: 'TRANSPORTE' | 'TOUR',
   ) {
     const { skip, take, pagina, porPagina } = rangoPaginacion(paginacion);
     if (tipo === 'TRANSPORTE') {
+      const where = paginacion.servicioId ? { transporteId: paginacion.servicioId } : undefined;
       const [datos, total] = await this.prisma.$transaction([
         this.prisma.salidaTransporte.findMany({
+          where,
           include: {
             transporte: {
               select: {
@@ -879,7 +881,7 @@ export class CatalogoService {
           skip,
           take,
         }),
-        this.prisma.salidaTransporte.count(),
+        this.prisma.salidaTransporte.count({ where }),
       ]);
       return construirPaginado(
         datos.map((s) => ({
@@ -892,8 +894,10 @@ export class CatalogoService {
         porPagina,
       );
     }
+    const where = paginacion.servicioId ? { tourId: paginacion.servicioId } : undefined;
     const [datos, total] = await this.prisma.$transaction([
       this.prisma.salidaTour.findMany({
+        where,
         include: {
           tour: { select: { destinoNombre: true, slug: true, activo: true } },
           reservas: {
@@ -905,7 +909,7 @@ export class CatalogoService {
         skip,
         take,
       }),
-      this.prisma.salidaTour.count(),
+      this.prisma.salidaTour.count({ where }),
     ]);
     return construirPaginado(
       datos.map((s) => ({

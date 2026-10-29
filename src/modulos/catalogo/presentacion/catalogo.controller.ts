@@ -237,6 +237,7 @@ class DefinirItinerarioDto {
 }
 class FiltrosSalidasDto extends PaginacionDto {
   @IsOptional() @IsIn(['TRANSPORTE', 'TOUR']) tipo?: 'TRANSPORTE' | 'TOUR';
+  @IsOptional() @IsString() servicioId?: string;
 }
 class ActualizarSalidaDto {
   @IsOptional()
