@@ -5,10 +5,10 @@ import { CatalogoService } from '../modulos/catalogo/aplicacion/catalogo.service
 import { PrismaService } from '../compartido/prisma/prisma.service';
 
 const imagenes = {
-  colca: 'https://res.cloudinary.com/ddbzpbrje/image/upload/v1792781458/imagenes/tours/b0eb674d-3c6b-4ac3-bed3-464eb80b3faf.jpg',
-  arequipa: 'https://res.cloudinary.com/ddbzpbrje/image/upload/v1792781214/imagenes/tours/13adf9e4-78b8-46d2-bf46-bd60598b13f4.jpg',
-  yura: 'https://res.cloudinary.com/ddbzpbrje/image/upload/v1792781555/imagenes/tours/463b9cda-9ed9-4056-b427-afaa5ff63138.jpg',
-  cusco: 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Plaza_de_Armas_de_Cuzco.jpg',
+  colca: 'https://storage.googleapis.com/incatravelperu-media-site-2026/imagenes/tours/legacy-341a7ee6becf5183d34e9548bdd0ec57e733c06adf3e6cffdd7e4c12e616ab0c.jpg',
+  arequipa: 'https://storage.googleapis.com/incatravelperu-media-site-2026/imagenes/tours/legacy-b15d26eb070cca6e76de2a95ae77ad2f98f76bd0b3186750bec899ba2b0b4c2f.jpg',
+  yura: 'https://storage.googleapis.com/incatravelperu-media-site-2026/imagenes/tours/legacy-891db0223506a039ff86eef9ef783d022740453bd163d0097c0bbacbee7f2bc0.jpg',
+  cusco: 'https://storage.googleapis.com/incatravelperu-media-site-2026/imagenes/tours/legacy-ca4d087a86d49309186b898db8954baa2aafc35e5c0a4026a69639666e03e147.jpg',
 };
 
 const eventos = [
@@ -157,16 +157,6 @@ async function main() {
         for (const [indice, punto] of evento.puntos.entries()) {
           const etapa = existente.itinerarios[indice];
           if (etapa) await catalogo.actualizarDescripcionItinerario(etapa.id, punto.descripcion);
-        }
-        const portada = existente.imagenes[0];
-        const urlRota = 'https://res.cloudinary.com/ddbzpbrje/image/upload/v1792781214/imagenes/tours/13adf9e4-78b8-46d2-bf46-4b18a286bd88.jpg';
-        if (portada && portada.url === urlRota) {
-          await prisma.imagen.update({
-            where: { id: portada.id },
-            data: { url: evento.foto, textoAlterno: evento.titulo },
-          });
-          portadasCorregidas++;
-          process.stdout.write(`Portada corregida: ${evento.slug}\n`);
         }
         existentes++;
         process.stdout.write(`Detalle de itinerario actualizado: ${evento.slug}\n`);

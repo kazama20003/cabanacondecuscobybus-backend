@@ -28,7 +28,7 @@ No se precargan plazos de cancelación ni porcentajes de reembolso. Antes de pro
 
 ## Entorno
 
-Copia `.env.example` a `.env`; nunca subas el archivo real. El frontend necesita las variables `NEXT_PUBLIC_*` durante el build. Usa los mismos enlaces, versión de políticas, canales y monedas en ambas aplicaciones. Los canales se pueden fijar globalmente o por categoría con `CANALES_RESERVA_TRANSPORTES`, `CANALES_RESERVA_TOURS` y `CANALES_RESERVA_EVENTOS` (`ONLINE`, `WHATSAPP` o ambos). `ONLINE` requiere Izipay habilitado y configurado.
+Copia `.env.example` a `.env`; nunca subas el archivo real. El bucket público `GCS_BUCKET_MEDIA` aloja imágenes y videos del catálogo; los comprobantes de pago no se cargan a ese bucket. El frontend necesita las variables `NEXT_PUBLIC_*` durante el build. Usa los mismos enlaces, versión de políticas, canales y monedas en ambas aplicaciones. Los canales se pueden fijar globalmente o por categoría con `CANALES_RESERVA_TRANSPORTES`, `CANALES_RESERVA_TOURS` y `CANALES_RESERVA_EVENTOS` (`ONLINE`, `WHATSAPP` o ambos). `ONLINE` requiere Izipay habilitado y configurado.
 
 ```sh
 npx prisma migrate deploy
@@ -36,7 +36,7 @@ npx prisma generate
 npm run build
 ```
 
-`GET /api/operacion/publica` expone canales, idiomas, monedas, enlaces y estado de preparación sin secretos. `GET /api/operacion/listo` devuelve 503 en producción si faltan base de datos, JWT seguro, HTTPS/CORS, enlaces legales/versionados, correo, Cloudinary, Izipay (si está habilitado), confirmación de licencias, copia de seguridad verificada o monitoreo.
+`GET /api/operacion/publica` expone canales, idiomas, monedas, enlaces y estado de preparación sin secretos. `GET /api/operacion/listo` devuelve 503 en producción si faltan base de datos, JWT seguro, HTTPS/CORS, enlaces legales/versionados, correo, Google Cloud Storage (`GCS_BUCKET_MEDIA`), Izipay (si está habilitado), confirmación de licencias, copia de seguridad verificada o monitoreo.
 
 ## Checklist de publicación
 
