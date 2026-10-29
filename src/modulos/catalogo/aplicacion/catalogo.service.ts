@@ -81,7 +81,7 @@ export class CatalogoService {
           paradas: { include: { imagenes: { orderBy: { orden: 'asc' } } }, orderBy: { orden: 'asc' } },
           salidas: { orderBy: { fechaHoraSalida: 'asc' } },
         },
-        orderBy: { creadoEn: 'desc' },
+        orderBy: [{ ordenCatalogo: 'asc' }, { creadoEn: 'desc' }],
         skip,
         take,
       }),
@@ -136,7 +136,7 @@ export class CatalogoService {
           imagenes: { orderBy: { orden: 'asc' } },
           salidas: { orderBy: { fechaHoraSalida: 'asc' } },
         },
-        orderBy: { creadoEn: 'desc' },
+        orderBy: [{ ordenCatalogo: 'asc' }, { creadoEn: 'desc' }],
         skip,
         take,
       }),
@@ -174,7 +174,7 @@ export class CatalogoService {
             orderBy: { fechaHoraSalida: 'asc' },
           },
         },
-        orderBy: [{ temporadaInicio: 'asc' }, { creadoEn: 'desc' }],
+        orderBy: [{ ordenCatalogo: 'asc' }, { temporadaInicio: 'asc' }, { creadoEn: 'desc' }],
         skip,
         take,
       }),
@@ -199,13 +199,61 @@ export class CatalogoService {
           imagenes: { orderBy: { orden: 'asc' } },
           salidas: { orderBy: { fechaHoraSalida: 'asc' } },
         },
-        orderBy: [{ temporadaInicio: 'desc' }, { creadoEn: 'desc' }],
+        orderBy: [{ ordenCatalogo: 'asc' }, { temporadaInicio: 'desc' }, { creadoEn: 'desc' }],
         skip,
         take,
       }),
       this.prisma.tour.count({ where }),
     ]);
     return construirPaginado(datos, total, pagina, porPagina);
+  }
+
+  /** Mueve un servicio una posición dentro de su vitrina pública. */
+  async reordenarCatalogo(
+    tipo: 'TRANSPORTE' | 'TOUR' | 'EVENTO',
+    id: string,
+    direccion: 'ARRIBA' | 'ABAJO',
+  ) {
+    if (tipo === 'TRANSPORTE') {
+      const actual = await this.prisma.transporte.findUnique({ where: { id } });
+      if (!actual) throw new NotFoundException('Ruta de transporte no encontrada');
+      const vecino = await this.prisma.transporte.findFirst({
+        where: direccion === 'ARRIBA'
+          ? { OR: [{ ordenCatalogo: { lt: actual.ordenCatalogo } }, { ordenCatalogo: actual.ordenCatalogo, creadoEn: { gt: actual.creadoEn } }] }
+          : { OR: [{ ordenCatalogo: { gt: actual.ordenCatalogo } }, { ordenCatalogo: actual.ordenCatalogo, creadoEn: { lt: actual.creadoEn } }] },
+        orderBy: direccion === 'ARRIBA'
+          ? [{ ordenCatalogo: 'desc' }, { creadoEn: 'asc' }]
+          : [{ ordenCatalogo: 'asc' }, { creadoEn: 'desc' }],
+      });
+      if (!vecino) return actual;
+      await this.prisma.$transaction([
+        this.prisma.transporte.update({ where: { id }, data: { ordenCatalogo: vecino.ordenCatalogo } }),
+        this.prisma.transporte.update({ where: { id: vecino.id }, data: { ordenCatalogo: actual.ordenCatalogo } }),
+      ]);
+      return { id, ordenCatalogo: vecino.ordenCatalogo };
+    }
+
+    const actual = await this.prisma.tour.findFirst({
+      where: { id, esEvento: tipo === 'EVENTO' },
+    });
+    if (!actual) throw new NotFoundException(tipo === 'EVENTO' ? 'Evento no encontrado' : 'Tour no encontrado');
+    const vecino = await this.prisma.tour.findFirst({
+      where: {
+        esEvento: actual.esEvento,
+        OR: direccion === 'ARRIBA'
+          ? [{ ordenCatalogo: { lt: actual.ordenCatalogo } }, { ordenCatalogo: actual.ordenCatalogo, creadoEn: { gt: actual.creadoEn } }]
+          : [{ ordenCatalogo: { gt: actual.ordenCatalogo } }, { ordenCatalogo: actual.ordenCatalogo, creadoEn: { lt: actual.creadoEn } }],
+      },
+      orderBy: direccion === 'ARRIBA'
+        ? [{ ordenCatalogo: 'desc' }, { creadoEn: 'asc' }]
+        : [{ ordenCatalogo: 'asc' }, { creadoEn: 'desc' }],
+    });
+    if (!vecino) return actual;
+    await this.prisma.$transaction([
+      this.prisma.tour.update({ where: { id }, data: { ordenCatalogo: vecino.ordenCatalogo } }),
+      this.prisma.tour.update({ where: { id: vecino.id }, data: { ordenCatalogo: actual.ordenCatalogo } }),
+    ]);
+    return { id, ordenCatalogo: vecino.ordenCatalogo };
   }
 
   async actualizarEstadoEventoEspecial(id: string, activo: boolean) {
@@ -298,7 +346,12 @@ export class CatalogoService {
     contenido?: ContenidoEntrada;
   }) {
     const { paradas, medios, contenido, ...base } = datos;
-    const transporte = await this.crearTransporteBase(base, paradas, medios);
+    const ultimoTransporte = await this.prisma.transporte.findFirst({
+      orderBy: { ordenCatalogo: 'desc' },
+      select: { ordenCatalogo: true },
+    });
+    const ordenCatalogo = (ultimoTransporte?.ordenCatalogo ?? -1) + 1;
+    const transporte = await this.crearTransporteBase(base, paradas, medios, ordenCatalogo);
     if (contenido) {
       await this.generarTraducciones('transporte', transporte.id, contenido);
     }
@@ -325,6 +378,7 @@ export class CatalogoService {
     },
     paradas?: ParadaEntrada[],
     medios?: MedioEntrada[],
+    ordenCatalogo = 0,
   ) {
     const nombresI18n = await this.construirI18n(
       paradas?.map((parada) => parada.nombre) ?? [],
@@ -335,6 +389,7 @@ export class CatalogoService {
     return this.prisma.transporte.create({
       data: {
         ...base,
+        ordenCatalogo,
         origenLatitud: new Prisma.Decimal(base.origenLatitud),
         origenLongitud: new Prisma.Decimal(base.origenLongitud),
         destinoLatitud: new Prisma.Decimal(base.destinoLatitud),
@@ -397,7 +452,13 @@ export class CatalogoService {
       );
     }
     const { medios, contenido, ...base } = datos;
-    const tour = await this.crearTourBase(base, medios);
+    const ultimoTour = await this.prisma.tour.findFirst({
+      where: { esEvento: base.esEvento ?? false },
+      orderBy: { ordenCatalogo: 'desc' },
+      select: { ordenCatalogo: true },
+    });
+    const ordenCatalogo = (ultimoTour?.ordenCatalogo ?? -1) + 1;
+    const tour = await this.crearTourBase({ ...base, ordenCatalogo }, medios);
     if (contenido) {
       await this.generarTraducciones('tour', tour.id, contenido);
     }
@@ -493,6 +554,7 @@ export class CatalogoService {
       esEvento?: boolean;
       temporadaInicio?: string;
       temporadaFin?: string;
+      ordenCatalogo?: number;
     },
     medios?: MedioEntrada[],
   ) {

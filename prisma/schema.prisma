@@ -104,6 +104,7 @@ model Transporte {
   id                      String                 @id @default(uuid()) @db.Uuid
   slug                    String                 @unique
   activo                  Boolean                @default(true)
+  ordenCatalogo           Int                    @default(0) @map("orden_catalogo")
   origenNombre            String                 @map("origen_nombre")
   origenLatitud           Decimal                @map("origen_latitud") @db.Decimal(10, 7)
   origenLongitud          Decimal                @map("origen_longitud") @db.Decimal(10, 7)
@@ -146,6 +147,7 @@ model Tour {
   id               String            @id @default(uuid()) @db.Uuid
   slug             String            @unique
   activo           Boolean           @default(true)
+  ordenCatalogo    Int               @default(0) @map("orden_catalogo")
   destinoNombre    String            @map("destino_nombre")
   destinoLatitud   Decimal           @map("destino_latitud") @db.Decimal(10, 7)
   destinoLongitud  Decimal           @map("destino_longitud") @db.Decimal(10, 7)
