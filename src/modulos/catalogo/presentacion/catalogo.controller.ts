@@ -57,6 +57,10 @@ class FiltrosToursDto extends PaginacionDto {
   @IsBoolean()
   esEvento?: boolean;
 }
+class ReordenarCatalogoDto {
+  @IsIn(['TRANSPORTE', 'TOUR', 'EVENTO']) tipo: 'TRANSPORTE' | 'TOUR' | 'EVENTO';
+  @IsIn(['ARRIBA', 'ABAJO']) direccion: 'ARRIBA' | 'ABAJO';
+}
 
 class ContenidoDto {
   @IsString() titulo: string;
@@ -344,6 +348,24 @@ export class CatalogoController {
   @Roles('ADMINISTRADOR')
   eventosAdmin(@Query() paginacion: PaginacionDto) {
     return this.servicio.listarEventosAdmin(paginacion);
+  }
+  @Put('administracion/catalogo/:id/orden')
+  @Roles('ADMINISTRADOR', 'OPERADOR')
+  async reordenarCatalogo(
+    @Param('id') id: string,
+    @Body() datos: ReordenarCatalogoDto,
+    @UsuarioActual() usuario: Usuario,
+  ) {
+    const actualizado = await this.servicio.reordenarCatalogo(datos.tipo, id, datos.direccion);
+    await this.auditoria.registrar({
+      usuarioId: usuario.id,
+      accion: 'ACTUALIZAR',
+      entidad: datos.tipo === 'TRANSPORTE' ? 'TRANSPORTE' : 'TOUR',
+      entidadId: id,
+      descripcion: `Cambió el orden de ${datos.tipo === 'EVENTO' ? 'un evento' : datos.tipo === 'TOUR' ? 'un tour' : 'una ruta'} en la página pública`,
+      detalle: { tipo: datos.tipo, direccion: datos.direccion, ordenCatalogo: actualizado.ordenCatalogo },
+    });
+    return actualizado;
   }
   @Post('administracion/eventos')
   @Roles('ADMINISTRADOR')
