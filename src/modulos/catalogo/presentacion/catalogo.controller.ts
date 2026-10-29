@@ -89,7 +89,7 @@ class ParadaDto {
   @IsString() nombre: string;
   @aplicar(EsLatitud()) latitud: number;
   @aplicar(EsLongitud()) longitud: number;
-  @IsInt() @Min(0) minutos: number;
+  @IsOptional() @IsInt() @Min(0) minutos?: number;
   @IsOptional() @IsInt() @Min(0) duracionParadaMinutos?: number;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional()
@@ -266,7 +266,7 @@ class ActualizarSalidaDto {
 }
 class CrearSalidaDto {
   @IsDateString() fechaHoraSalida: string;
-  @IsInt() @Min(1) capacidad: number;
+  @IsOptional() @IsInt() @Min(1) capacidad?: number;
   @IsOptional() @IsInt() @Min(1) minimoPasajeros?: number;
   @IsNumber() @Min(0) precioPen: number;
   @IsNumber() @Min(0) precioUsd: number;
@@ -279,7 +279,7 @@ class CrearPlantillaDto {
   diasSemana: number[];
   @IsDateString() fechaDesde: string;
   @IsOptional() @IsDateString() fechaHasta?: string;
-  @IsInt() @Min(1) capacidad: number;
+  @IsOptional() @IsInt() @Min(1) capacidad?: number;
   @IsOptional() @IsInt() @Min(1) minimoPasajeros?: number;
   @IsNumber() @Min(0) precioPen: number;
   @IsNumber() @Min(0) precioUsd: number;

@@ -131,7 +131,7 @@ model ParadaTransporte {
   nombre                String
   latitud               Decimal    @db.Decimal(10, 7)
   longitud              Decimal    @db.Decimal(10, 7)
-  minutos               Int        @map("minutos")
+  minutos               Int?       @map("minutos")
   duracionParadaMinutos Int        @default(0) @map("duracion_parada_minutos")
   descripcion           String?
   nombreI18n            Json?      @map("nombre_i18n")
@@ -211,7 +211,7 @@ model SalidaTransporte {
   plantillaId        String?          @map("plantilla_id") @db.Uuid
   fechaHoraSalida    DateTime         @map("fecha_hora_salida")
   fechaHoraLlegada   DateTime?        @map("fecha_hora_llegada")
-  capacidad          Int
+  capacidad          Int?
   minimoPasajeros    Int              @default(2) @map("minimo_pasajeros")
   precioPen          Decimal          @map("precio_pen") @db.Decimal(10, 2)
   precioUsd          Decimal          @map("precio_usd") @db.Decimal(10, 2)
@@ -235,7 +235,7 @@ model SalidaTour {
   tourId             String           @map("tour_id") @db.Uuid
   plantillaId        String?          @map("plantilla_id") @db.Uuid
   fechaHoraSalida    DateTime         @map("fecha_hora_salida")
-  capacidad          Int
+  capacidad          Int?
   minimoPasajeros    Int              @default(1) @map("minimo_pasajeros")
   precioPen          Decimal          @map("precio_pen") @db.Decimal(10, 2)
   precioUsd          Decimal          @map("precio_usd") @db.Decimal(10, 2)
@@ -284,7 +284,7 @@ model PlantillaSalida {
   fechaDesde         DateTime           @map("fecha_desde") @db.Date
   /// Null = sin fecha final (se generan salidas de forma continua).
   fechaHasta         DateTime?          @map("fecha_hasta") @db.Date
-  capacidad          Int
+  capacidad          Int?
   minimoPasajeros    Int                @default(1) @map("minimo_pasajeros")
   precioPen          Decimal            @map("precio_pen") @db.Decimal(10, 2)
   precioUsd          Decimal            @map("precio_usd") @db.Decimal(10, 2)

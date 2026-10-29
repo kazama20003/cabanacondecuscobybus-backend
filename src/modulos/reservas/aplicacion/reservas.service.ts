@@ -149,11 +149,11 @@ export class ReservasService {
           _sum: { cantidadPasajeros: true },
         });
         if (
-          (ocupacion._sum.cantidadPasajeros ?? 0) + datos.pasajeros.length >
-          salida.capacidad
+          salida.capacidad !== null &&
+          (ocupacion._sum.cantidadPasajeros ?? 0) + datos.pasajeros.length > salida.capacidad
         )
           throw new BadRequestException('No hay cupos suficientes');
-        if (salida.capacidad < 1 || salida.precioPen.lt(0) || salida.precioUsd.lt(0))
+        if ((salida.capacidad !== null && salida.capacidad < 1) || salida.precioPen.lt(0) || salida.precioUsd.lt(0))
           throw new ConflictException('La salida tiene capacidad o precio inválido y no puede reservarse.');
         if (salida.permiteAdelanto && (salida.porcentajeAdelanto < 1 || salida.porcentajeAdelanto > 100))
           throw new ConflictException('El porcentaje de adelanto configurado para la salida es inválido.');
