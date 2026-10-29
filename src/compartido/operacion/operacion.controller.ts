@@ -54,9 +54,7 @@ export class OperacionController {
       ...(!documentos.cancelaciones ? ['URL_CANCELACIONES'] : []),
       ...(!this.config.get('VERSION_POLITICAS') ? ['VERSION_POLITICAS'] : []),
       ...(Object.values(canalesPorServicio).some((valores) => valores.includes('WHATSAPP')) && !this.config.get('WHATSAPP_RESERVAS') ? ['WHATSAPP_RESERVAS'] : []),
-      ...(!this.config.get('CLOUDINARY_CLOUD_NAME') || !this.config.get('CLOUDINARY_API_KEY') || !this.config.get('CLOUDINARY_API_SECRET')
-        ? ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']
-        : []),
+      ...(!this.config.get('GCS_BUCKET_MEDIA')?.trim() ? ['GCS_BUCKET_MEDIA'] : []),
       ...(!this.config.get('RESEND_API_KEY') || !this.config.get('CORREO_REMITENTE') || !this.config.get('CORREO_ADMINISTRADOR')
         ? ['RESEND_API_KEY', 'CORREO_REMITENTE', 'CORREO_ADMINISTRADOR']
         : []),

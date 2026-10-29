@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Storage } from '@google-cloud/storage';
-import { v2 as cloudinary } from 'cloudinary';
 import { randomUUID } from 'node:crypto';
 
 const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -21,7 +20,7 @@ const EXTENSIONES: Record<string, string> = {
   'video/webm': 'webm',
   'video/quicktime': 'mov',
 };
-const CATEGORIAS = ['transportes', 'tours', 'eventos', 'promociones', 'comprobantes'] as const;
+const CATEGORIAS = ['transportes', 'tours', 'eventos', 'promociones'] as const;
 type Categoria = (typeof CATEGORIAS)[number];
 type ArchivoSubido = { buffer: Buffer; mimetype: string; size?: number };
 type TipoMedio = 'IMAGEN' | 'VIDEO';
@@ -45,18 +44,11 @@ export class UploadsService {
     const esVideo = TIPOS_VIDEO.includes(archivo.mimetype as (typeof TIPOS_VIDEO)[number]);
     if (!esImagen && !esVideo)
       throw new BadRequestException('Solo se permiten imágenes JPG/PNG/WebP o videos MP4/WebM/MOV');
-    if (categoria === 'comprobantes' && !esImagen)
-      throw new BadRequestException('Los comprobantes deben ser imágenes JPG, PNG o WebP.');
     const tamanoMaximo = esVideo ? TAMANO_MAXIMO_VIDEO : TAMANO_MAXIMO_IMAGEN;
     if (archivo.buffer.length > tamanoMaximo)
       throw new BadRequestException(`El archivo supera el máximo permitido de ${esVideo ? 100 : 25} MB.`);
 
-    // Los comprobantes no deben quedar en el bucket público de medios del catálogo.
-    if (categoria === 'comprobantes') return this.subirComprobante(archivo);
-
-    const bucketNombre = this.configuracion.get<string>('GCS_BUCKET_MEDIA')?.trim();
-    if (!bucketNombre)
-      throw new ServiceUnavailableException('Falta configurar GCS_BUCKET_MEDIA en el backend.');
+    const bucketNombre = this.bucketConfigurado();
     const tipo: TipoMedio = esVideo ? 'VIDEO' : 'IMAGEN';
     const carpeta = `${esVideo ? 'videos' : 'imagenes'}/${categoria}`;
     const nombreObjeto = `${carpeta}/${randomUUID()}.${EXTENSIONES[archivo.mimetype]}`;
@@ -87,32 +79,21 @@ export class UploadsService {
   async eliminar(clave: string, tipo: TipoMedio, categoria: string) {
     if (!CATEGORIAS.includes(categoria as Categoria))
       throw new BadRequestException('Categoría de archivo no válida');
-    const prefijo = `${tipo === 'VIDEO' ? 'videos' : 'imagenes'}/${categoria}/`;
-    if (clave.startsWith('gcs:')) {
-      if (categoria === 'comprobantes') throw new BadRequestException('Los comprobantes no se guardan en el bucket público.');
-      const nombreObjeto = clave.slice('gcs:'.length);
-      if (!nombreObjeto.startsWith(prefijo))
-        throw new BadRequestException('El archivo no pertenece a la categoría indicada');
-      const bucketNombre = this.configuracion.get<string>('GCS_BUCKET_MEDIA')?.trim();
-      if (!bucketNombre)
-        throw new ServiceUnavailableException('Falta configurar GCS_BUCKET_MEDIA en el backend.');
-      try {
-        await this.storage.bucket(bucketNombre).file(nombreObjeto).delete({ ignoreNotFound: true });
-      } catch (error) {
-        this.logger.error(`No se pudo eliminar un archivo de Cloud Storage (${categoria})`, error);
-        throw new ServiceUnavailableException('No se pudo eliminar el archivo de Google Cloud Storage.');
-      }
+    if (!clave.startsWith('gcs:')) {
+      this.logger.warn(`Se omitió la eliminación de un medio legado fuera de GCS (${categoria})`);
       return;
     }
-
-    // Las claves antiguas continúan apuntando a Cloudinary para no romper el catálogo existente.
-    if (!clave.startsWith(prefijo))
+    const nombreObjeto = clave.slice('gcs:'.length);
+    const prefijo = `${tipo === 'VIDEO' ? 'videos' : 'imagenes'}/${categoria}/`;
+    if (!nombreObjeto.startsWith(prefijo))
       throw new BadRequestException('El archivo no pertenece a la categoría indicada');
-    this.configurarCloudinary();
-    await cloudinary.uploader.destroy(clave, {
-      resource_type: tipo === 'VIDEO' ? 'video' : 'image',
-      invalidate: true,
-    });
+
+    try {
+      await this.storage.bucket(this.bucketConfigurado()).file(nombreObjeto).delete({ ignoreNotFound: true });
+    } catch (error) {
+      this.logger.error(`No se pudo eliminar un archivo de Cloud Storage (${categoria})`, error);
+      throw new ServiceUnavailableException('No se pudo eliminar el archivo de Google Cloud Storage.');
+    }
   }
 
   async eliminarSilenciosamente(clave: string | null, tipo: TipoMedio, categoria: string) {
@@ -129,30 +110,10 @@ export class UploadsService {
     }
   }
 
-  private async subirComprobante(archivo: ArchivoSubido) {
-    this.configurarCloudinary();
-    const carpeta = 'imagenes/comprobantes';
-    const resultado = await new Promise<{ public_id: string; secure_url: string }>((resolve, reject) => {
-      const carga = cloudinary.uploader.upload_stream(
-        { folder: carpeta, public_id: randomUUID(), resource_type: 'image' },
-        (error, respuesta) => {
-          if (error || !respuesta) return reject(error);
-          resolve(respuesta);
-        },
-      );
-      carga.end(archivo.buffer);
-    });
-    return { clave: resultado.public_id, tipo: 'IMAGEN' as const, urlPublica: resultado.secure_url };
-  }
-
-  private configurarCloudinary() {
-    const cloudName = this.configuracion.get<string>('CLOUDINARY_CLOUD_NAME');
-    const apiKey = this.configuracion.get<string>('CLOUDINARY_API_KEY');
-    const apiSecret = this.configuracion.get<string>('CLOUDINARY_API_SECRET');
-    if (!cloudName || !apiKey || !apiSecret)
-      throw new ServiceUnavailableException(
-        'Cloudinary para comprobantes no está configurado (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)',
-      );
-    cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
+  private bucketConfigurado() {
+    const bucketNombre = this.configuracion.get<string>('GCS_BUCKET_MEDIA')?.trim();
+    if (!bucketNombre)
+      throw new ServiceUnavailableException('Falta configurar GCS_BUCKET_MEDIA en el backend.');
+    return bucketNombre;
   }
 }

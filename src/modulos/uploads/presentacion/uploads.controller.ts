@@ -38,7 +38,7 @@ export class UploadsController {
     archivo: { buffer: Buffer; mimetype: string },
     @Param('categoria') categoria: string,
   ) {
-    if (!['transportes', 'tours', 'eventos', 'promociones', 'comprobantes'].includes(categoria)) {
+    if (!['transportes', 'tours', 'eventos', 'promociones'].includes(categoria)) {
       throw new BadRequestException('Categoría de archivo no válida');
     }
     return this.servicio.subir(archivo, categoria);
@@ -50,7 +50,7 @@ export class UploadsController {
     @Query('clave') clave: string,
     @Query('tipo') tipo: 'IMAGEN' | 'VIDEO',
   ) {
-    if (!['transportes', 'tours', 'eventos', 'promociones', 'comprobantes'].includes(categoria)) {
+    if (!['transportes', 'tours', 'eventos', 'promociones'].includes(categoria)) {
       throw new BadRequestException('Categoría de archivo no válida');
     }
     if (!clave || !['IMAGEN', 'VIDEO'].includes(tipo)) {
