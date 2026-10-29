@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnApplicationBootstrap,
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EstadoSalida, PlantillaSalida, Prisma } from '@prisma/client';
@@ -10,8 +11,10 @@ import { PrismaService } from '../../../compartido/prisma/prisma.service';
 
 /** Zona horaria fija de operación (Perú no tiene horario de verano). */
 const OFFSET_LIMA = '-05:00';
-/** Ventana de generación hacia adelante cuando la plantilla no tiene fecha final. */
-const DIAS_HORIZONTE = 60;
+/** Los transportes regulares mantienen un año de fechas reservables por delante. */
+const DIAS_HORIZONTE_TRANSPORTE = 365;
+/** Tours mantienen una ventana más corta para no abrir fechas indefinidas. */
+const DIAS_HORIZONTE_TOUR = 60;
 
 export interface CrearPlantillaEntrada {
   transporteId?: string;
@@ -43,10 +46,15 @@ export interface ActualizarPlantillaEntrada {
 }
 
 @Injectable()
-export class PlantillasSalidaService {
+export class PlantillasSalidaService implements OnApplicationBootstrap {
   private readonly logger = new Logger(PlantillasSalidaService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Al iniciar, materializa las fechas futuras para que el cambio esté vigente de inmediato. */
+  async onApplicationBootstrap() {
+    await this.extenderHorizonte();
+  }
 
   async listar(tipo?: 'TRANSPORTE' | 'TOUR') {
     const where: Prisma.PlantillaSalidaWhereInput =
@@ -247,8 +255,11 @@ export class PlantillasSalidaService {
     const hoy = new Date();
     const inicio =
       plantilla.fechaDesde > hoy ? new Date(plantilla.fechaDesde) : hoy;
+    const diasHorizonte = plantilla.transporteId
+      ? DIAS_HORIZONTE_TRANSPORTE
+      : DIAS_HORIZONTE_TOUR;
     const horizonte = new Date(hoy);
-    horizonte.setDate(horizonte.getDate() + DIAS_HORIZONTE);
+    horizonte.setDate(horizonte.getDate() + diasHorizonte);
     const fin =
       plantilla.fechaHasta && plantilla.fechaHasta < horizonte
         ? plantilla.fechaHasta
