@@ -798,12 +798,18 @@ export class CatalogoService {
       where: { itinerarioTour: { tourId } },
       select: { clave: true, tipo: true },
     });
+    const etapasAnteriores = await this.prisma.itinerarioTour.findMany({
+      where: { tourId },
+      select: { titulo: true, descripcion: true, tituloI18n: true, descripcionI18n: true },
+    });
 
     const titulosI18n = await this.construirI18n(
       items.map((item) => item.titulo),
+      items.map((item) => etapasAnteriores.find((anterior) => anterior.titulo === item.titulo)?.tituloI18n),
     );
     const descripcionesI18n = await this.construirI18n(
       items.map((item) => item.descripcion),
+      items.map((item) => etapasAnteriores.find((anterior) => anterior.descripcion === item.descripcion)?.descripcionI18n),
     );
 
     await this.prisma.$transaction([
@@ -987,40 +993,84 @@ export class CatalogoService {
     id: string,
     contenido: ContenidoEntrada,
   ) {
+    const anteriores = (tipo === 'transporte'
+      ? await this.prisma.traduccionTransporte.findMany({ where: { transporteId: id } })
+      : await this.prisma.traduccionTour.findMany({ where: { tourId: id } })) as {
+        idioma: string;
+        titulo: string;
+        resumen: string;
+        descripcion: string;
+        queLlevar?: string | null;
+        incluye: string | null;
+        noIncluye: string | null;
+        estado: EstadoTraduccion;
+      }[];
+    const porIdioma = new Map(anteriores.map((traduccion) => [traduccion.idioma, traduccion]));
+    const anteriorEs = porIdioma.get('es');
     await this.guardarTraduccion(tipo, id, 'es', contenido, 'PUBLICADA');
     await Promise.all(
       IDIOMAS_CATALOGO.filter((idioma) => idioma !== 'es').map(
         async (idioma) => {
-          try {
-            const traduccion = await this.traducirContenido(contenido, idioma);
-            await this.guardarTraduccion(tipo, id, idioma, traduccion, 'PUBLICADA');
-          } catch (error) {
-            this.logger.error(`No se pudo traducir automáticamente al idioma ${idioma}`, error);
-            await this.guardarTraduccion(tipo, id, idioma, contenido, 'BORRADOR');
+          const anterior = porIdioma.get(idioma);
+          const campos: (keyof ContenidoEntrada)[] = [
+            'titulo', 'resumen', 'descripcion', 'queLlevar', 'incluye', 'noIncluye',
+          ];
+          const fuenteAnterior: Record<string, string> = {
+            titulo: anteriorEs?.titulo ?? '',
+            resumen: anteriorEs?.resumen ?? '',
+            descripcion: anteriorEs?.descripcion ?? '',
+            queLlevar: anteriorEs?.queLlevar ?? '',
+            incluye: anteriorEs?.incluye ?? '',
+            noIncluye: anteriorEs?.noIncluye ?? '',
+          };
+          const fuenteActual: Record<string, string> = {
+            titulo: contenido.titulo,
+            resumen: contenido.resumen,
+            descripcion: contenido.descripcion,
+            queLlevar: contenido.queLlevar ?? '',
+            incluye: contenido.incluye ?? '',
+            noIncluye: contenido.noIncluye ?? '',
+          };
+          const textoTraducido: Record<string, string> = {
+            titulo: anterior?.titulo ?? '',
+            resumen: anterior?.resumen ?? '',
+            descripcion: anterior?.descripcion ?? '',
+            queLlevar: anterior?.queLlevar ?? '',
+            incluye: anterior?.incluye ?? '',
+            noIncluye: anterior?.noIncluye ?? '',
+          };
+          const debeReintentar = anterior?.estado !== EstadoTraduccion.PUBLICADA;
+          const pendientes = campos.filter((campo) => {
+            const clave = String(campo);
+            return Boolean(fuenteActual[clave]) &&
+              (debeReintentar || fuenteAnterior[clave] !== fuenteActual[clave] || !textoTraducido[clave]);
+          });
+          if (pendientes.length) {
+            try {
+              const traducidos = await this.traducirTextos(
+                pendientes.map((campo) => fuenteActual[String(campo)]), idioma,
+              );
+              pendientes.forEach((campo, indice) => {
+                textoTraducido[String(campo)] = traducidos[indice];
+              });
+            } catch (error) {
+              this.logger.error(`No se pudo traducir automáticamente al idioma ${idioma}`, error);
+              await this.guardarTraduccion(tipo, id, idioma, contenido, 'BORRADOR');
+              return;
+            }
           }
+          const traducido: ContenidoEntrada = {
+            titulo: textoTraducido.titulo || contenido.titulo,
+            resumen: textoTraducido.resumen || contenido.resumen,
+            descripcion: textoTraducido.descripcion || contenido.descripcion,
+            queLlevar: fuenteActual.queLlevar ? (textoTraducido.queLlevar || contenido.queLlevar) : undefined,
+            incluye: fuenteActual.incluye ? (textoTraducido.incluye || contenido.incluye) : undefined,
+            noIncluye: fuenteActual.noIncluye ? (textoTraducido.noIncluye || contenido.noIncluye) : undefined,
+          };
+          await this.guardarTraduccion(tipo, id, idioma, traducido, 'PUBLICADA');
         },
       ),
     );
-  }
-
-  private async traducirContenido(contenido: ContenidoEntrada, idioma: string) {
-    const textos = [
-      contenido.titulo,
-      contenido.resumen,
-      contenido.descripcion,
-      contenido.queLlevar ?? '',
-      contenido.incluye ?? '',
-      contenido.noIncluye ?? '',
-    ];
-    const traducciones = await this.traducirTextos(textos, idioma);
-    return {
-      titulo: traducciones[0],
-      resumen: traducciones[1],
-      descripcion: traducciones[2],
-      queLlevar: traducciones[3] || undefined,
-      incluye: traducciones[4] || undefined,
-      noIncluye: traducciones[5] || undefined,
-    };
   }
 
   /**
@@ -1030,15 +1080,31 @@ export class CatalogoService {
    */
   private async construirI18n(
     textos: string[],
+    existentes?: (Prisma.JsonValue | null | undefined)[],
   ): Promise<(Record<string, string> | undefined)[]> {
     if (!textos.length) return [];
-    const mapas: Record<string, string>[] = textos.map((texto) => ({ es: texto }));
+    const mapas: Record<string, string>[] = textos.map((texto, indice) => {
+      const existente = existentes?.[indice];
+      if (existente && typeof existente === 'object' && !Array.isArray(existente)) {
+        const mapa = existente as Record<string, unknown>;
+        if (mapa.es === texto) {
+          return Object.fromEntries(
+            Object.entries(mapa).filter((par): par is [string, string] => typeof par[1] === 'string'),
+          );
+        }
+      }
+      return { es: texto };
+    });
     await Promise.all(
       IDIOMAS_CATALOGO.filter((idioma) => idioma !== 'es').map(async (idioma) => {
         try {
-          const traducidos = await this.traducirTextos(textos, idioma);
-          textos.forEach((_, indice) => {
-            if (traducidos[indice]) mapas[indice][idioma] = traducidos[indice];
+          const indices = textos.flatMap((texto, indice) =>
+            texto && !mapas[indice][idioma] ? [indice] : [],
+          );
+          if (!indices.length) return;
+          const traducidos = await this.traducirTextos(indices.map((indice) => textos[indice]), idioma);
+          indices.forEach((indice, posicion) => {
+            if (traducidos[posicion]) mapas[indice][idioma] = traducidos[posicion];
           });
         } catch (error) {
           this.logger.error(
@@ -1065,6 +1131,8 @@ export class CatalogoService {
   }
 
   private async traducirTextos(textos: string[], idioma: string): Promise<string[]> {
+    const noVacios = textos.flatMap((texto, indice) => texto ? [{ texto, indice }] : []);
+    if (!noVacios.length) return textos.map(() => '');
     const apiKey = this.configuracion.get<string>('GOOGLE_TRANSLATE_API_KEY');
     if (apiKey) {
       const respuesta = await fetch(
@@ -1072,7 +1140,7 @@ export class CatalogoService {
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ q: textos, source: 'es', target: idioma, format: 'text' }),
+          body: JSON.stringify({ q: noVacios.map(({ texto }) => texto), source: 'es', target: idioma, format: 'text' }),
         },
       );
       if (!respuesta.ok) throw new Error(`Google Translate respondió ${respuesta.status}`);
@@ -1080,15 +1148,16 @@ export class CatalogoService {
         data?: { translations?: { translatedText: string }[] };
       };
       const traducciones = datos.data?.translations?.map((item) => item.translatedText);
-      if (!traducciones || traducciones.length !== textos.length) {
+      if (!traducciones || traducciones.length !== noVacios.length) {
         throw new Error('Google Translate devolvió una respuesta incompleta');
       }
-      return traducciones;
+      const resultado = textos.map(() => '');
+      noVacios.forEach(({ indice }, posicion) => { resultado[indice] = traducciones[posicion]; });
+      return resultado;
     }
 
-    return Promise.all(
-      textos.map(async (texto) => {
-        if (!texto) return '';
+    const traducidas = await Promise.all(
+      noVacios.map(async ({ texto }) => {
         const parametros = new URLSearchParams({
           client: 'gtx',
           sl: 'es',
@@ -1102,6 +1171,9 @@ export class CatalogoService {
         return datos[0].map((fragmento) => fragmento[0]).join('');
       }),
     );
+    const resultado = textos.map(() => '');
+    noVacios.forEach(({ indice }, posicion) => { resultado[indice] = traducidas[posicion]; });
+    return resultado;
   }
 
   /**
@@ -1289,8 +1361,8 @@ export class CatalogoService {
     }
     return this.prisma.traduccionTour.upsert({
       where: { tourId_idioma: { tourId: id, idioma } },
-      create: { tourId: id, idioma, ...campos, queLlevar: contenido.queLlevar },
-      update: { ...campos, queLlevar: contenido.queLlevar },
+      create: { tourId: id, idioma, ...campos, queLlevar: contenido.queLlevar ?? null },
+      update: { ...campos, queLlevar: contenido.queLlevar ?? null },
     });
   }
 
@@ -1328,12 +1400,18 @@ export class CatalogoService {
       where: { paradaTransporte: { transporteId } },
       select: { clave: true, tipo: true },
     });
+    const paradasAnteriores = await this.prisma.paradaTransporte.findMany({
+      where: { transporteId },
+      select: { nombre: true, descripcion: true, nombreI18n: true, descripcionI18n: true },
+    });
 
     const nombresI18n = await this.construirI18n(
       paradas.map((parada) => parada.nombre),
+      paradas.map((parada) => paradasAnteriores.find((anterior) => anterior.nombre === parada.nombre)?.nombreI18n),
     );
     const descripcionesI18n = await this.construirI18n(
       paradas.map((parada) => parada.descripcion ?? ''),
+      paradas.map((parada) => paradasAnteriores.find((anterior) => anterior.descripcion === parada.descripcion)?.descripcionI18n),
     );
 
     await this.prisma.$transaction([
@@ -1378,7 +1456,7 @@ export class CatalogoService {
   async actualizarDescripcionParada(id: string, descripcion: string) {
     const parada = await this.prisma.paradaTransporte.findUnique({ where: { id } });
     if (!parada) throw new NotFoundException('Punto de recorrido no encontrado');
-    const [descripcionI18n] = await this.construirI18n([descripcion]);
+    const [descripcionI18n] = await this.construirI18n([descripcion], [parada.descripcionI18n]);
     return this.prisma.paradaTransporte.update({
       where: { id },
       data: { descripcion, descripcionI18n: descripcionI18n ?? Prisma.JsonNull },
@@ -1388,7 +1466,7 @@ export class CatalogoService {
   async actualizarDescripcionItinerario(id: string, descripcion: string) {
     const etapa = await this.prisma.itinerarioTour.findUnique({ where: { id } });
     if (!etapa) throw new NotFoundException('Etapa de itinerario no encontrada');
-    const [descripcionI18n] = await this.construirI18n([descripcion]);
+    const [descripcionI18n] = await this.construirI18n([descripcion], [etapa.descripcionI18n]);
     return this.prisma.itinerarioTour.update({
       where: { id },
       data: { descripcion, descripcionI18n: descripcionI18n ?? Prisma.JsonNull },
