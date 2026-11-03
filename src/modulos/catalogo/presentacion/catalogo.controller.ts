@@ -302,7 +302,7 @@ class ActualizarPlantillaDto {
   @IsOptional() @IsString() vehiculoId?: string;
   @IsOptional() @IsBoolean() activo?: boolean;
 }
-class FiltrosPlantillasDto {
+class FiltrosPlantillasDto extends PaginacionDto {
   @IsOptional() @IsIn(['TRANSPORTE', 'TOUR']) tipo?: 'TRANSPORTE' | 'TOUR';
 }
 
@@ -325,12 +325,14 @@ export class CatalogoController {
     @Query('destino') destino: string,
     @Query('fecha') fecha: string,
     @Query('pasajeros') pasajeros: string,
+    @Query() paginacion: PaginacionDto,
   ) {
     return this.servicio.buscarSalidasTransporte(
       origen,
       destino,
       new Date(fecha),
       Number(pasajeros),
+      paginacion,
     );
   }
   @Get('transportes/:slug') transporte(
@@ -654,7 +656,7 @@ export class CatalogoController {
   @Get('administracion/plantillas-salida')
   @Roles('ADMINISTRADOR', 'OPERADOR')
   listarPlantillas(@Query() filtros: FiltrosPlantillasDto) {
-    return this.plantillas.listar(filtros.tipo);
+    return this.plantillas.listar(filtros.tipo, filtros);
   }
   @Post('administracion/transportes/:id/plantillas-salida')
   @Roles('ADMINISTRADOR', 'OPERADOR')

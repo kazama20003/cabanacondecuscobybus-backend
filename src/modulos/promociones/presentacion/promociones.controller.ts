@@ -71,6 +71,10 @@ class ActualizarPromocionDto {
   @IsOptional() @IsBoolean() activo?: boolean;
 }
 
+class FiltrosPromocionesPublicasDto extends PaginacionDto {
+  @IsOptional() @IsEnum(ObjetivoPromocion) objetivo?: ObjetivoPromocion;
+}
+
 @Controller()
 export class PromocionesController {
   constructor(
@@ -80,8 +84,8 @@ export class PromocionesController {
 
   /** Público: promociones vigentes (banners del sitio). */
   @Get('promociones')
-  vigentes(@Query('objetivo') objetivo?: ObjetivoPromocion) {
-    return this.servicio.vigentes(objetivo);
+  vigentes(@Query() filtros: FiltrosPromocionesPublicasDto) {
+    return this.servicio.vigentes(filtros.objetivo, filtros);
   }
 
   @Get('administracion/promociones')

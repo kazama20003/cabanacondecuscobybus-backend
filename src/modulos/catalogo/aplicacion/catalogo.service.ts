@@ -299,13 +299,14 @@ export class CatalogoService {
     destino: string,
     fecha: Date,
     pasajeros: number,
+    paginacion: PaginacionDto,
   ) {
+    const { skip, take, pagina, porPagina } = rangoPaginacion(paginacion);
     const inicio = new Date(fecha);
     inicio.setHours(0, 0, 0, 0);
     const fin = new Date(inicio);
     fin.setDate(fin.getDate() + 1);
-    return this.prisma.salidaTransporte.findMany({
-      where: {
+    const where: Prisma.SalidaTransporteWhereInput = {
         fechaHoraSalida: { gte: inicio, lt: fin },
         estado: {
           in: [
@@ -319,17 +320,26 @@ export class CatalogoService {
           origenNombre: { contains: origen, mode: 'insensitive' },
           destinoNombre: { contains: destino, mode: 'insensitive' },
         },
-      },
-      include: {
-        transporte: {
-          include: {
-            traducciones: true,
-            paradas: { orderBy: { orden: 'asc' } },
+      };
+    return this.prisma.$transaction([
+      this.prisma.salidaTransporte.findMany({
+        where,
+        include: {
+          transporte: {
+            include: {
+              traducciones: true,
+              paradas: { orderBy: { orden: 'asc' } },
+            },
           },
         },
-      },
-      orderBy: { fechaHoraSalida: 'asc' },
-    });
+        orderBy: { fechaHoraSalida: 'asc' },
+        skip,
+        take,
+      }),
+      this.prisma.salidaTransporte.count({ where }),
+    ]).then(([datos, total]) =>
+      construirPaginado(datos, total, pagina, porPagina),
+    );
   }
 
   async crearTransporte(datos: {

@@ -19,6 +19,9 @@ class InicioSesionDto {
 class InicioSesionGoogleDto {
   @IsString() @MinLength(20) idToken: string;
 }
+class TokenRenovacionDto {
+  @IsString() @MinLength(32) tokenRenovacion: string;
+}
 
 @Controller('autenticacion')
 export class AutenticacionController {
@@ -32,6 +35,12 @@ export class AutenticacionController {
   }
   @Post('google') iniciarSesionGoogle(@Body() datos: InicioSesionGoogleDto) {
     return this.servicio.iniciarSesionGoogle(datos.idToken);
+  }
+  @Post('renovar') renovarSesion(@Body() datos: TokenRenovacionDto) {
+    return this.servicio.renovarSesion(datos.tokenRenovacion);
+  }
+  @Post('cerrar-sesion') cerrarSesion(@Body() datos: TokenRenovacionDto) {
+    return this.servicio.cerrarSesion(datos.tokenRenovacion);
   }
   @Get('mi-perfil') @UseGuards(GuardiaJwt) perfil(
     @UsuarioActual() usuario: { id: string },

@@ -33,6 +33,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { EstadoPago, MetodoPago, Moneda } from '@prisma/client';
+import { PaginacionDto } from '../../../compartido/paginacion';
 import { GuardiaAdministrador } from '../../autenticacion/presentacion/guardia-administrador';
 import { GuardiaJwt } from '../../autenticacion/presentacion/guardia-jwt';
 import { UsuarioActual } from '../../autenticacion/presentacion/usuario-actual';
@@ -112,8 +113,11 @@ export class ReservasController {
   /** Reservas del turista logueado (perfil de cliente). */
   @Get('mias')
   @UseGuards(GuardiaJwt)
-  misReservas(@UsuarioActual() usuario: { id: string }) {
-    return this.servicio.misReservas(usuario.id);
+  misReservas(
+    @UsuarioActual() usuario: { id: string },
+    @Query() paginacion: PaginacionDto,
+  ) {
+    return this.servicio.misReservas(usuario.id, paginacion);
   }
 
   @Get(':codigo') verInvitado(
