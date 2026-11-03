@@ -32,7 +32,13 @@ export class UploadsService {
 
   constructor(private readonly configuracion: ConfigService) {
     const projectId = this.configuracion.get<string>('GOOGLE_CLOUD_PROJECT');
-    this.storage = projectId ? new Storage({ projectId }) : new Storage();
+    const keyFilename = this.configuracion
+      .get<string>('GOOGLE_APPLICATION_CREDENTIALS')
+      ?.trim();
+    this.storage = new Storage({
+      ...(projectId ? { projectId } : {}),
+      ...(keyFilename ? { keyFilename } : {}),
+    });
   }
 
   async subir(archivo: ArchivoSubido | undefined, categoria: string) {
@@ -66,6 +72,17 @@ export class UploadsService {
       });
     } catch (error) {
       this.logger.error(`No se pudo guardar un archivo en Cloud Storage (${categoria})`, error);
+      const detalle = error instanceof Error ? error.message : String(error);
+      if (/could not load the default credentials|default credentials/i.test(detalle)) {
+        throw new ServiceUnavailableException(
+          'El backend no tiene credenciales de Google Cloud configuradas. Configura GOOGLE_APPLICATION_CREDENTIALS con la ruta del archivo de credenciales del servidor.',
+        );
+      }
+      if (/storage.objects.create|permission.*denied|forbidden/i.test(detalle)) {
+        throw new ServiceUnavailableException(
+          'La cuenta de servicio del backend no tiene permiso para guardar archivos en el bucket configurado.',
+        );
+      }
       throw new ServiceUnavailableException('No se pudo guardar el archivo en Google Cloud Storage.');
     }
 

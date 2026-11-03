@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IzipayService } from '../../modulos/pagos/aplicacion/izipay.service';
@@ -55,6 +56,14 @@ export class OperacionController {
       ...(!this.config.get('VERSION_POLITICAS') ? ['VERSION_POLITICAS'] : []),
       ...(Object.values(canalesPorServicio).some((valores) => valores.includes('WHATSAPP')) && !this.config.get('WHATSAPP_RESERVAS') ? ['WHATSAPP_RESERVAS'] : []),
       ...(!this.config.get('GCS_BUCKET_MEDIA')?.trim() ? ['GCS_BUCKET_MEDIA'] : []),
+      ...(produccion && !this.config.get<string>('GOOGLE_APPLICATION_CREDENTIALS')?.trim()
+        ? ['GOOGLE_APPLICATION_CREDENTIALS']
+        : []),
+      ...(produccion &&
+      this.config.get<string>('GOOGLE_APPLICATION_CREDENTIALS')?.trim() &&
+      !existsSync(this.config.get<string>('GOOGLE_APPLICATION_CREDENTIALS')!.trim())
+        ? ['GOOGLE_APPLICATION_CREDENTIALS (archivo no encontrado)']
+        : []),
       ...(!this.config.get('RESEND_API_KEY') || !this.config.get('CORREO_REMITENTE') || !this.config.get('CORREO_ADMINISTRADOR')
         ? ['RESEND_API_KEY', 'CORREO_REMITENTE', 'CORREO_ADMINISTRADOR']
         : []),
