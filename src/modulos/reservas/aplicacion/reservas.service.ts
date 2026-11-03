@@ -15,6 +15,11 @@ import {
   Prisma,
 } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
+import {
+  construirPaginado,
+  PaginacionDto,
+  rangoPaginacion,
+} from '../../../compartido/paginacion';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
 import { NotificacionesService } from '../../../compartido/notificaciones/notificaciones.service';
 import { IzipayService } from '../../pagos/aplicacion/izipay.service';
@@ -227,26 +232,34 @@ export class ReservasService {
   }
 
   /** Reservas del usuario logueado (perfil del turista). */
-  misReservas(usuarioId: string) {
-    return this.prisma.reserva.findMany({
-      where: { usuarioId },
-      include: {
-        pasajeros: true,
-        pagos: true,
-        promocion: { select: { titulo: true, codigo: true } },
-        salidaTransporte: {
-          include: {
-            transporte: {
-              select: { origenNombre: true, destinoNombre: true, slug: true },
+  async misReservas(usuarioId: string, paginacion: PaginacionDto) {
+    const { skip, take, pagina, porPagina } = rangoPaginacion(paginacion);
+    const where = { usuarioId };
+    const [datos, total] = await this.prisma.$transaction([
+      this.prisma.reserva.findMany({
+        where,
+        include: {
+          pasajeros: true,
+          pagos: true,
+          promocion: { select: { titulo: true, codigo: true } },
+          salidaTransporte: {
+            include: {
+              transporte: {
+                select: { origenNombre: true, destinoNombre: true, slug: true },
+              },
             },
           },
+          salidaTour: {
+            include: { tour: { select: { destinoNombre: true, slug: true } } },
+          },
         },
-        salidaTour: {
-          include: { tour: { select: { destinoNombre: true, slug: true } } },
-        },
-      },
-      orderBy: { creadoEn: 'desc' },
-    });
+        orderBy: { creadoEn: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.reserva.count({ where }),
+    ]);
+    return construirPaginado(datos, total, pagina, porPagina);
   }
 
   async verInvitado(codigo: string, token: string) {

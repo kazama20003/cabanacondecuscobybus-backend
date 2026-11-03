@@ -56,10 +56,10 @@ export class PromocionesService {
   }
 
   /** Promociones vigentes para el sitio público. */
-  vigentes(objetivo?: ObjetivoPromocion) {
+  async vigentes(objetivo: ObjetivoPromocion | undefined, paginacion: PaginacionDto) {
+    const { skip, take, pagina, porPagina } = rangoPaginacion(paginacion);
     const ahora = new Date();
-    return this.prisma.promocion.findMany({
-      where: {
+    const where: Prisma.PromocionWhereInput = {
         activo: true,
         fechaInicio: { lte: ahora },
         fechaFin: { gte: ahora },
@@ -67,9 +67,17 @@ export class PromocionesService {
           ? { objetivo: { in: [objetivo, ObjetivoPromocion.TODOS] } }
           : {}),
         OR: [{ limiteUsos: null }, { usos: { lt: this.prisma.promocion.fields.limiteUsos } }],
-      },
-      orderBy: { fechaFin: 'asc' },
-    });
+      };
+    const [datos, total] = await this.prisma.$transaction([
+      this.prisma.promocion.findMany({
+        where,
+        orderBy: { fechaFin: 'asc' },
+        skip,
+        take,
+      }),
+      this.prisma.promocion.count({ where }),
+    ]);
+    return construirPaginado(datos, total, pagina, porPagina);
   }
 
   async listarAdmin(paginacion: PaginacionDto) {

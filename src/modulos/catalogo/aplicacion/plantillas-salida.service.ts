@@ -7,6 +7,11 @@ import {
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EstadoSalida, PlantillaSalida, Prisma } from '@prisma/client';
+import {
+  construirPaginado,
+  PaginacionDto,
+  rangoPaginacion,
+} from '../../../compartido/paginacion';
 import { PrismaService } from '../../../compartido/prisma/prisma.service';
 
 /** Zona horaria fija de operación (Perú no tiene horario de verano). */
@@ -56,24 +61,31 @@ export class PlantillasSalidaService implements OnApplicationBootstrap {
     await this.extenderHorizonte();
   }
 
-  async listar(tipo?: 'TRANSPORTE' | 'TOUR') {
+  async listar(tipo: 'TRANSPORTE' | 'TOUR' | undefined, paginacion: PaginacionDto) {
+    const { skip, take, pagina, porPagina } = rangoPaginacion(paginacion);
     const where: Prisma.PlantillaSalidaWhereInput =
       tipo === 'TRANSPORTE'
         ? { transporteId: { not: null } }
         : tipo === 'TOUR'
           ? { tourId: { not: null } }
           : {};
-    return this.prisma.plantillaSalida.findMany({
-      where,
-      include: {
-        transporte: {
-          select: { slug: true, origenNombre: true, destinoNombre: true },
+    const [datos, total] = await this.prisma.$transaction([
+      this.prisma.plantillaSalida.findMany({
+        where,
+        include: {
+          transporte: {
+            select: { slug: true, origenNombre: true, destinoNombre: true },
+          },
+          tour: { select: { slug: true, destinoNombre: true } },
+          _count: { select: { salidasTransporte: true, salidasTour: true } },
         },
-        tour: { select: { slug: true, destinoNombre: true } },
-        _count: { select: { salidasTransporte: true, salidasTour: true } },
-      },
-      orderBy: { creadoEn: 'desc' },
-    });
+        orderBy: { creadoEn: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.plantillaSalida.count({ where }),
+    ]);
+    return construirPaginado(datos, total, pagina, porPagina);
   }
 
   async crear(datos: CrearPlantillaEntrada) {

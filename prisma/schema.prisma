@@ -96,8 +96,22 @@ model Usuario {
   reservas         Reserva[]
   pagosConfirmados Pago[]      @relation("pagos_confirmados_por")
   auditorias       Auditoria[]
+  sesionesAutenticacion SesionAutenticacion[]
 
   @@map("usuarios")
+}
+
+model SesionAutenticacion {
+  id          String    @id @default(uuid()) @db.Uuid
+  usuarioId   String    @map("usuario_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  expiraEn    DateTime  @map("expira_en")
+  revocadoEn  DateTime? @map("revocado_en")
+  creadoEn    DateTime  @default(now()) @map("creado_en")
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, expiraEn])
+  @@map("sesiones_autenticacion")
 }
 
 model Transporte {
