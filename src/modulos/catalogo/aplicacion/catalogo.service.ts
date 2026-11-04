@@ -354,6 +354,7 @@ export class CatalogoService {
     contenido?: ContenidoEntrada;
   }) {
     const { paradas, medios, contenido, ...base } = datos;
+    this.validarMediosTransporte(medios);
     const ultimoTransporte = await this.prisma.transporte.findFirst({
       orderBy: { ordenCatalogo: 'desc' },
       select: { ordenCatalogo: true },
@@ -634,6 +635,7 @@ export class CatalogoService {
     });
 
     if (medios !== undefined) {
+      this.validarMediosTransporte(medios);
       await this.reemplazarMedios('transporte', id, medios, 'transportes');
     }
     if (contenido) {
@@ -762,6 +764,14 @@ export class CatalogoService {
           this.uploads.eliminarSilenciosamente(imagen.clave, imagen.tipo, categoria),
         ),
     );
+  }
+
+  private validarMediosTransporte(medios?: MedioEntrada[]) {
+    if (!medios?.some((medio) => medio.tipo !== TipoMedio.VIDEO)) {
+      throw new BadRequestException(
+        'Cada transporte debe tener al menos una imagen de portada. El video es opcional.',
+      );
+    }
   }
 
   /** Define el itinerario completo del tour (reemplaza el set, orden = posición). */
