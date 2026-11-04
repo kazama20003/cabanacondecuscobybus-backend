@@ -100,7 +100,7 @@ export class CatalogoService {
       },
     });
     if (!transporte) throw new NotFoundException('Transporte no encontrado');
-    const traduccion =
+    const traduccion = idioma === 'all' ? undefined :
       transporte.traducciones.find((item) => item.idioma === idioma) ??
       transporte.traducciones.find((item) => item.idioma === 'es');
     const paradas = transporte.paradas.map((parada) => ({
@@ -108,7 +108,11 @@ export class CatalogoService {
       nombre: this.elegirIdioma(parada.nombreI18n, idioma, parada.nombre),
       descripcion: this.elegirIdioma(parada.descripcionI18n, idioma, parada.descripcion),
     }));
-    return { ...transporte, paradas, traducciones: traduccion ? [traduccion] : [] };
+    return {
+      ...transporte,
+      paradas,
+      traducciones: idioma === 'all' ? transporte.traducciones : traduccion ? [traduccion] : [],
+    };
   }
 
   async listarTours(
@@ -283,7 +287,7 @@ export class CatalogoService {
       },
     });
     if (!tour) throw new NotFoundException('Tour no encontrado');
-    const traduccion =
+    const traduccion = idioma === 'all' ? undefined :
       tour.traducciones.find((item) => item.idioma === idioma) ??
       tour.traducciones.find((item) => item.idioma === 'es');
     const itinerarios = tour.itinerarios.map((item) => ({
@@ -291,7 +295,11 @@ export class CatalogoService {
       titulo: this.elegirIdioma(item.tituloI18n, idioma, item.titulo),
       descripcion: this.elegirIdioma(item.descripcionI18n, idioma, item.descripcion),
     }));
-    return { ...tour, itinerarios, traducciones: traduccion ? [traduccion] : [] };
+    return {
+      ...tour,
+      itinerarios,
+      traducciones: idioma === 'all' ? tour.traducciones : traduccion ? [traduccion] : [],
+    };
   }
 
   buscarSalidasTransporte(
