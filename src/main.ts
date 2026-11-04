@@ -5,11 +5,20 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const origenesCorsPredeterminados = [
+    'http://localhost:3005',
+    'http://localhost:3000',
+    'http://localhost:3500',
+    'https://www.cabanacondecuscobybus.com',
+    'https://cabanacondecuscobybus.com',
+  ];
+  const origenesCorsConfigurados = (process.env.CORS_ORIGENES ?? '')
+    .split(',')
+    .map((origen) => origen.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: process.env.CORS_ORIGENES?.split(',') ?? [
-      'http://localhost:3005',
-      'http://localhost:3000',
-      'http://localhost:3500',
+    origin: [
+      ...new Set([...origenesCorsPredeterminados, ...origenesCorsConfigurados]),
     ],
     credentials: true,
   });
